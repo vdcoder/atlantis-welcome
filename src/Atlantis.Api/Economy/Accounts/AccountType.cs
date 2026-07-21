@@ -1,6 +1,8 @@
-﻿namespace Atlantis.Api.Economy.Accounts
+﻿namespace Atlantis.Api.Economy.Accounts;
+
+public enum AccountType
 {
-    public class AccountType
-    {
-    }
+    CitizenWallet = 1,
+    DevelopmentFund = 2,
+    Treasury = 3
 }

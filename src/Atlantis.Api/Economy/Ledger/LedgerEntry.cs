@@ -1,6 +1,22 @@
-﻿namespace Atlantis.Api.Economy.Ledger
+﻿namespace Atlantis.Api.Economy.Ledger;
+
+public sealed record LedgerEntry
 {
-    public class LedgerEntry
-    {
-    }
+    public required Guid Id { get; init; }
+
+    public required Guid TransactionId { get; init; }
+
+    public required string AccountId { get; init; }
+
+    public required decimal Amount { get; init; }
+
+    public required string Currency { get; init; }
+
+    public required string Reason { get; init; }
+
+    public string? ReferenceType { get; init; }
+
+    public string? ReferenceId { get; init; }
+
+    public required DateTimeOffset CreatedAt { get; init; }
 }

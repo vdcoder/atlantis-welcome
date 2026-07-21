@@ -1,6 +1,6 @@
 ﻿namespace Atlantis.Api.Persistence.Configurations
 {
-    public class AccountEntityConfiguration
+    public class MoneyAccountEntityConfiguration
     {
     }
 }
