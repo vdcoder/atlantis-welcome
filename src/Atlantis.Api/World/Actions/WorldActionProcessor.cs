@@ -7,28 +7,38 @@ namespace Atlantis.Api.World.Actions
     {
         private readonly WorldState _state;
         private readonly WorldTransitionProcessor _transitionProcessor;
+        private readonly ILogger<WorldActionProcessor> _logger;
 
         public WorldActionProcessor(
             WorldState state,
-            WorldTransitionProcessor transitionProcessor)
+            WorldTransitionProcessor transitionProcessor,
+            ILogger<WorldActionProcessor> logger)
         {
             _state = state;
             _transitionProcessor = transitionProcessor;
+            _logger = logger;
         }
 
-        public async Task<WorldTransition> ProcessAsync(WorldActionRequest request)
+        public Task<IReadOnlyList<WorldTransition>> ProcessAsync(WorldActionRequest request)
         {
             return request switch
             {
-                MoveEntityRequest movement => await ProcessAsync(movement),
-                SayRequest speech => await ProcessAsync(speech),
-                TouchRequest touch => await ProcessAsync(touch),
+                MoveEntityRequest moveRequest =>
+                    ProcessAsync(moveRequest),
+
+                SayRequest sayRequest =>
+                    ProcessAsync(sayRequest),
+
+                TouchRequest touchRequest =>
+                    ProcessAsync(touchRequest),
+
                 _ => throw new NotSupportedException(
-                    $"Unsupported world action: {request.GetType().Name}")
+                    $"Unsupported world action request type: " +
+                    $"{request.GetType().Name}.")
             };
         }
 
-        private async Task<WorldTransition> ProcessAsync(MoveEntityRequest request)
+        private async Task<IReadOnlyList<WorldTransition>> ProcessAsync(MoveEntityRequest request)
         {
             var entity = _state.World.Entities
                 .SingleOrDefault(entity => entity.Id == request.EntityId)
@@ -39,30 +49,37 @@ namespace Atlantis.Api.World.Actions
                 entity.Position,
                 request.Destination);
 
-            await _transitionProcessor.ApplyAsync(transition, _state);
+            await _transitionProcessor.ApplyAsync(
+                transition,
+                _state);
 
-            return transition;
+            return [transition];
         }
 
-        private async Task<WorldTransition> ProcessAsync(SayRequest request)
+        private async Task<IReadOnlyList<WorldTransition>> ProcessAsync(
+    SayRequest request)
         {
             // Verify actor exists
-            var actor = _state.World.Entities
-                .SingleOrDefault(entity => entity.Id == request.ActorId)
-                ?? throw new EntityNotFoundException(request.ActorId);
+            _ = _state.World.Entities
+                .SingleOrDefault(entity =>
+                    entity.Id == request.ActorId)
+                ?? throw new EntityNotFoundException(
+                    request.ActorId);
 
-            // Verify actor controls the entity
+            // Verify entity exists
             var entity = _state.World.Entities
-                .SingleOrDefault(entity => entity.Id == request.EntityId)
-                ?? throw new EntityNotFoundException(request.EntityId);
+                .SingleOrDefault(entity =>
+                    entity.Id == request.EntityId)
+                ?? throw new EntityNotFoundException(
+                    request.EntityId);
 
-            // Reject blank text
             if (string.IsNullOrWhiteSpace(request.Text))
             {
-                throw new ArgumentException("Utterance text cannot be empty.", nameof(request.Text));
+                throw new ArgumentException(
+                    "Utterance text cannot be empty.",
+                    nameof(request.Text));
             }
 
-            // Construct the next utterance sequence using WorldState revision
             var utterance = new Utterance
             {
                 Sequence = _state.Revision + 1,
@@ -74,15 +91,17 @@ namespace Atlantis.Api.World.Actions
                 entity.Id,
                 utterance);
 
-            await _transitionProcessor.ApplyAsync(transition, _state);
+            await _transitionProcessor.ApplyAsync(
+                transition,
+                _state);
 
-            return transition;
+            return [transition];
         }
 
         private const float MaximumTouchDistance = 2f;
         private const int MaximumTouchTextLength = 2_000;
 
-        private async Task<WorldTransition> ProcessAsync(
+        private async Task<IReadOnlyList<WorldTransition>> ProcessAsync(
             TouchRequest request)
         {
             var actor = _state.World.Entities
@@ -118,10 +137,16 @@ namespace Atlantis.Api.World.Actions
 
             if (distance > MaximumTouchDistance)
             {
-                throw new InvalidOperationException(
-                    $"Target '{target.Id}' is {distance:F2}m away; " +
-                    $"maximum touch distance is " +
-                    $"{MaximumTouchDistance:F2}m.");
+                _logger.LogInformation(
+                    "Entity {ActorId} attempted to touch {TargetId} " +
+                    "at {Distance:F2}m; maximum touch distance is " +
+                    "{MaximumDistance:F2}m. No transition was produced.",
+                    actor.Id,
+                    target.Id,
+                    distance,
+                    MaximumTouchDistance);
+
+                return [];
             }
 
             if (target.Type is "citizen" or "visitor")
@@ -143,7 +168,7 @@ namespace Atlantis.Api.World.Actions
                     transition,
                     _state);
 
-                return transition;
+                return [transition];
             }
 
             if (target.Type == "ui")
@@ -158,11 +183,18 @@ namespace Atlantis.Api.World.Actions
                     transition,
                     _state);
 
-                return transition;
+                return [transition];
             }
 
-            throw new InvalidOperationException(
-                $"Entity '{target.Id}' does not accept touch input.");
+            _logger.LogInformation(
+                "Entity {ActorId} attempted to touch {TargetId}, " +
+                "but entity type {TargetType} does not accept touch input. " +
+                "No transition was produced.",
+                actor.Id,
+                target.Id,
+                target.Type);
+
+            return [];
         }
 
         private static float Distance(

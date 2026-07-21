@@ -3,6 +3,7 @@ using System;
 using Atlantis.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Atlantis.Api.Migrations
 {
     [DbContext(typeof(AtlantisDbContext))]
-    partial class AtlantisDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260721190843_AddMoneyFoundation")]
+    partial class AddMoneyFoundation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -26,115 +29,92 @@ namespace Atlantis.Api.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("EntityId")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("entity_id");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("name");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("PlaceId")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("place_id");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<float>("PositionX")
-                        .HasColumnType("real")
-                        .HasColumnName("position_x");
+                        .HasColumnType("real");
 
                     b.Property<float>("PositionY")
-                        .HasColumnType("real")
-                        .HasColumnName("position_y");
+                        .HasColumnType("real");
 
                     b.Property<float>("PositionZ")
-                        .HasColumnType("real")
-                        .HasColumnName("position_z");
+                        .HasColumnType("real");
 
                     b.Property<DateTime?>("PrivateMessageDeliveredAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("private_message_delivered_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("PrivateMessageSenderId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("private_message_sender_id");
+                        .HasColumnType("text");
 
                     b.Property<long?>("PrivateMessageSequence")
-                        .HasColumnType("bigint")
-                        .HasColumnName("private_message_sequence");
+                        .HasColumnType("bigint");
 
                     b.Property<string>("PrivateMessageText")
-                        .HasColumnType("text")
-                        .HasColumnName("private_message_text");
+                        .HasColumnType("text");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("type");
+                        .HasColumnType("character varying(50)");
 
                     b.Property<long?>("UtteranceSequence")
-                        .HasColumnType("bigint")
-                        .HasColumnName("utterance_sequence");
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime?>("UtteranceSpokenAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("utterance_spoken_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UtteranceText")
-                        .HasColumnType("text")
-                        .HasColumnName("utterance_text");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("WorldId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("world_id");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("WorldId", "EntityId")
-                        .IsUnique()
-                        .HasDatabaseName("ux_entities_world_id_entity_id");
+                        .IsUnique();
 
-                    b.ToTable("entities", (string)null);
+                    b.ToTable("Entities");
                 });
 
             modelBuilder.Entity("Atlantis.Api.Data.Entities.WorldEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<long>("Revision")
-                        .HasColumnType("bigint")
-                        .HasColumnName("revision");
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("Time")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("time");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("WorldId")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("world_id");
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("WorldId")
-                        .IsUnique()
-                        .HasDatabaseName("ux_worlds_world_id");
+                        .IsUnique();
 
-                    b.ToTable("worlds", (string)null);
+                    b.ToTable("Worlds");
                 });
 
             modelBuilder.Entity("Atlantis.Api.Persistence.Entities.LedgerEntryEntity", b =>
@@ -190,15 +170,14 @@ namespace Atlantis.Api.Migrations
                     b.HasIndex("AccountId")
                         .HasDatabaseName("ix_ledger_entries_account_id");
 
+                    b.HasIndex("TransactionId")
+                        .HasDatabaseName("ix_ledger_entries_transaction_id");
+
                     b.HasIndex("AccountId", "CreatedAt")
                         .HasDatabaseName("ix_ledger_entries_account_created_at");
 
                     b.HasIndex("ReferenceType", "ReferenceId")
                         .HasDatabaseName("ix_ledger_entries_reference");
-
-                    b.HasIndex("TransactionId", "AccountId")
-                        .IsUnique()
-                        .HasDatabaseName("ux_ledger_entries_transaction_id_account_id");
 
                     b.ToTable("ledger_entries", (string)null);
                 });

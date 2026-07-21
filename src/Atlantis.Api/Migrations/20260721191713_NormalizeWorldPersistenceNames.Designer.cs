@@ -3,6 +3,7 @@ using System;
 using Atlantis.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Atlantis.Api.Migrations
 {
     [DbContext(typeof(AtlantisDbContext))]
-    partial class AtlantisDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260721191713_NormalizeWorldPersistenceNames")]
+    partial class NormalizeWorldPersistenceNames
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -190,15 +193,14 @@ namespace Atlantis.Api.Migrations
                     b.HasIndex("AccountId")
                         .HasDatabaseName("ix_ledger_entries_account_id");
 
+                    b.HasIndex("TransactionId")
+                        .HasDatabaseName("ix_ledger_entries_transaction_id");
+
                     b.HasIndex("AccountId", "CreatedAt")
                         .HasDatabaseName("ix_ledger_entries_account_created_at");
 
                     b.HasIndex("ReferenceType", "ReferenceId")
                         .HasDatabaseName("ix_ledger_entries_reference");
-
-                    b.HasIndex("TransactionId", "AccountId")
-                        .IsUnique()
-                        .HasDatabaseName("ux_ledger_entries_transaction_id_account_id");
 
                     b.ToTable("ledger_entries", (string)null);
                 });

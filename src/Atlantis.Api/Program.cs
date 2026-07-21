@@ -6,8 +6,10 @@ using Atlantis.Api.Citizens.Perception;
 using Atlantis.Api.Citizens.Runtime;
 using Atlantis.Api.Data;
 using Atlantis.Api.Models;
+using Atlantis.Api.Persistence;
 using Atlantis.Api.World;
 using Atlantis.Api.World.Actions;
+using Atlantis.Api.Economy.Ledger;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,6 +42,8 @@ builder.Services.AddSingleton<SemanticReach>();
 builder.Services.AddSingleton<Predictor>();
 builder.Services.AddSingleton<NearbyEntityPerception>();
 
+builder.Services.AddScoped<LedgerService>();
+
 builder.Services.AddHostedService<CitizenHostedService>();
 
 var app = builder.Build();
@@ -53,6 +57,8 @@ using (var scope = app.Services.CreateScope())
     var registeredWorldState = scope.ServiceProvider.GetRequiredService<WorldState>();
 
     await InitializeWorldStateAsync(dbContext, registeredWorldState);
+
+    await EconomySeed.EnsureSeededAsync(dbContext);
 }
 
 if (app.Environment.IsDevelopment())
