@@ -40,7 +40,16 @@ namespace Atlantis.Api.World
                 entityId,
                 destination);
 
-            var transition = (EntityMovedTransition)await _actionProcessor.ProcessAsync(request);
+            var transitions =
+                await _actionProcessor.ProcessAsync(request);
+
+            if (transitions.Count != 1 ||
+                transitions[0] is not EntityMovedTransition transition)
+            {
+                throw new InvalidOperationException(
+                    "Move entity request must produce exactly one " +
+                    "EntityMovedTransition.");
+            }
 
             return new MoveEntityResult(
                 _worldState.Revision,

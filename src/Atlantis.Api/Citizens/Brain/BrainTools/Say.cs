@@ -13,7 +13,7 @@ namespace Atlantis.Api.Citizens.Brain.BrainTools
             _actionProcessor = actionProcessor;
         }
 
-        public async Task<WorldTransition> SayAsync(
+        public async Task<IReadOnlyList<WorldTransition>> SayAsync(
             string citizenId,
             string text)
         {
