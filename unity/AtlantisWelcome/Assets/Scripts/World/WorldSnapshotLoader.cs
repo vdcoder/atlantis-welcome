@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using AtlantisWelcome.Entities;
@@ -20,9 +21,24 @@ namespace AtlantisWelcome.World
         [SerializeField]
         private float refreshIntervalSeconds = 1f;
 
-        private readonly Dictionary<string, EntityView> _entityViews = new();
+        private readonly Dictionary<string, EntityView>
+            _entityViews = new();
+
+        private readonly Dictionary<string, long>
+            _latestUtteranceSequences = new();
+
+        private readonly Dictionary<string, long>
+            _latestPrivateMessageSequences = new();
+
+        private bool _hasAppliedInitialSnapshot;
 
         public long CurrentRevision { get; private set; } = -1;
+
+        public event Action<EntityDto, UtteranceDto>
+            UtteranceReceived;
+
+        public event Action<EntityDto, PrivateMessageDto>
+            PrivateMessageReceived;
 
         private void Start()
         {
@@ -37,7 +53,8 @@ namespace AtlantisWelcome.World
                     ApplySnapshot,
                     HandleFailure);
 
-                yield return new WaitForSeconds(refreshIntervalSeconds);
+                yield return new WaitForSeconds(
+                    refreshIntervalSeconds);
             }
         }
 
@@ -50,7 +67,7 @@ namespace AtlantisWelcome.World
                 out entityView);
         }
 
-        public EntityView? FindEntityView(string entityId)
+        public EntityView FindEntityView(string entityId)
         {
             return _entityViews.TryGetValue(
                 entityId,
@@ -59,7 +76,8 @@ namespace AtlantisWelcome.World
                     : null;
         }
 
-        private void ApplySnapshot(WorldSnapshotDto snapshot)
+        private void ApplySnapshot(
+            WorldSnapshotDto snapshot)
         {
             if (snapshot.revision <= CurrentRevision)
             {
@@ -71,7 +89,10 @@ namespace AtlantisWelcome.World
             foreach (var entity in snapshot.world.entities)
             {
                 ApplyEntity(entity);
+                ApplyCommunications(entity);
             }
+
+            _hasAppliedInitialSnapshot = true;
 
             Debug.Log(
                 $"Atlantis world '{snapshot.world.worldId}' " +
@@ -89,10 +110,97 @@ namespace AtlantisWelcome.World
                     citizenPrefab,
                     entityContainer);
 
-                _entityViews.Add(entity.id, entityView);
+                _entityViews.Add(
+                    entity.id,
+                    entityView);
             }
 
             entityView.Apply(entity);
+        }
+
+        private void ApplyCommunications(
+            EntityDto entity)
+        {
+            ApplyUtterance(entity);
+            ApplyPrivateMessage(entity);
+        }
+
+        private void ApplyUtterance(
+            EntityDto entity)
+        {
+            var utterance = entity.currentUtterance;
+
+            if (utterance == null)
+            {
+                return;
+            }
+
+            var previousSequence =
+                _latestUtteranceSequences.TryGetValue(
+                    entity.id,
+                    out var sequence)
+                        ? sequence
+                        : -1;
+
+            _latestUtteranceSequences[entity.id] =
+                utterance.sequence;
+
+            if (!_hasAppliedInitialSnapshot)
+            {
+                return;
+            }
+
+            if (utterance.sequence <= previousSequence)
+            {
+                return;
+            }
+
+            //Debug.Log(
+            //    $"{entity.name} said: {utterance.text}");
+
+            UtteranceReceived?.Invoke(
+                entity,
+                utterance);
+        }
+
+        private void ApplyPrivateMessage(
+            EntityDto entity)
+        {
+            var message =
+                entity.currentPrivateMessage;
+
+            if (message == null)
+            {
+                return;
+            }
+
+            var previousSequence =
+                _latestPrivateMessageSequences.TryGetValue(
+                    entity.id,
+                    out var sequence)
+                        ? sequence
+                        : -1;
+
+            _latestPrivateMessageSequences[entity.id] =
+                message.sequence;
+
+            if (!_hasAppliedInitialSnapshot)
+            {
+                return;
+            }
+
+            if (message.sequence <= previousSequence)
+            {
+                return;
+            }
+
+            //Debug.Log(
+            //    $"{entity.name} received a private touch " +
+            //    $"from {message.senderId}.");
+
+            PrivateMessageReceived?.Invoke(
+                entity,
+                message);
         }
 
         private static void HandleFailure(string message)

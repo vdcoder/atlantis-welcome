@@ -33,6 +33,9 @@ namespace AtlantisWelcome.World
         public string name;
         public string placeId;
         public PositionDto position;
+
+        public UtteranceDto currentUtterance;
+        public PrivateMessageDto currentPrivateMessage;
     }
 
     [Serializable]
@@ -41,6 +44,23 @@ namespace AtlantisWelcome.World
         public float x;
         public float y;
         public float z;
+    }
+
+    [Serializable]
+    public sealed class UtteranceDto
+    {
+        public long sequence;
+        public string text;
+        public string spokenAt;
+    }
+
+    [Serializable]
+    public sealed class PrivateMessageDto
+    {
+        public long sequence;
+        public string senderId;
+        public string text;
+        public string deliveredAt;
     }
 
     [Serializable]

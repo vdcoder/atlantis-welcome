@@ -35,6 +35,9 @@ namespace AtlantisWelcome.Networking
             try
             {
                 var json = request.downloadHandler.text;
+
+                //Debug.Log($"Raw world JSON: {json}");
+
                 var snapshot =
                     JsonUtility.FromJson<WorldSnapshotDto>(json);
 

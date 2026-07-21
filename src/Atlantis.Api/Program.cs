@@ -96,10 +96,12 @@ static async Task InitializeWorldStateAsync(
                     Type = entity.Type,
                     Name = entity.Name,
                     PlaceId = entity.PlaceId,
+
                     Position = new Position(
                         entity.PositionX,
                         entity.PositionY,
                         entity.PositionZ),
+
                     CurrentUtterance =
                         entity.UtteranceText != null &&
                         entity.UtteranceSequence.HasValue &&
@@ -108,14 +110,17 @@ static async Task InitializeWorldStateAsync(
                             {
                                 Sequence =
                                     entity.UtteranceSequence.Value,
+
                                 Text =
                                     entity.UtteranceText,
+
                                 SpokenAt =
                                     new DateTimeOffset(
                                         entity.UtteranceSpokenAt.Value,
                                         TimeSpan.Zero)
                             }
                             : null,
+
                     CurrentPrivateMessage =
                         entity.PrivateMessageText != null &&
                         entity.PrivateMessageSequence.HasValue &&
@@ -136,8 +141,8 @@ static async Task InitializeWorldStateAsync(
                                     new DateTimeOffset(
                                         entity.PrivateMessageDeliveredAt.Value,
                                         TimeSpan.Zero)
-        }
-        : null
+                            }
+                            : null
                 })
                 .ToList()
         };
