@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: atlantis-postgres
+    environment:
+      POSTGRES_USER: atlantis
+      POSTGRES_PASSWORD: atlantis-dev-password
+      POSTGRES_DB: atlantis
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - atlantis-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlantis -d atlantis"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Atlantis.Api/Dockerfile
+    container_name: atlantis-api
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Atlantis: "Host=postgres;Port=5432;Database=atlantis;Username=atlantis;Password=atlantis-dev-password"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  atlantis-postgres-data:

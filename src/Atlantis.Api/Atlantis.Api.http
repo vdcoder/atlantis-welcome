@@ -1,0 +1,28 @@
+@Atlantis.Api_HostAddress = http://localhost:32769
+
+### Get world - Orestes at (0, 0, 0)
+GET {{Atlantis.Api_HostAddress}}/api/world
+Accept: application/json
+
+###
+
+### Move Orestes to (3, 0, 5)
+POST {{Atlantis.Api_HostAddress}}/api/world/entities/orestes/move
+Content-Type: application/json
+
+{
+  "actorId": "player-1",
+  "x": 3,
+  "y": 0,
+  "z": 50
+}
+
+###
+
+### Get world - Orestes now at (3, 0, 5)
+GET {{Atlantis.Api_HostAddress}}/api/world
+Accept: application/json
+
+###
+
+

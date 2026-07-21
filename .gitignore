@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+.vs/
+.idea/
+Library/
+Temp/
+Logs/
+UserSettings/
+.env
+appsettings.*.json
+!appsettings.json

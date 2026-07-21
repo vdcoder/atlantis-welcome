@@ -1,0 +1,64 @@
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# Visual Studio
+.vs
+.vscode
+bin
+obj
+*.user
+*.suo
+*.sln.docstates
+*.log
+
+# Dependencies
+node_modules
+packages
+
+# Build artifacts and temp
+dist
+publish
+*.tmp
+*.temp
+
+# Docker files (don't duplicate in context)
+docker-compose*
+Dockerfile*
+
+# Project files
+*.dbmdl
+*.jfm
+*.*proj.user
+
+# Configuration
+.env
+secrets.dev.yaml
+values.dev.yaml
+azds.yaml
+
+# Misc
+LICENSE
+README.md
+.classpath
+.dockerignore
+.project
+.settings
+.toolstarget
+charts
+npm-debug.log
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Unity and editor things
+unity
+.idea
+.vscode
+.vs
+
+# OneDrive sync artifacts
+$RECYCLE.BIN
+~*
