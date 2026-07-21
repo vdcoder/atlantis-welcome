@@ -75,7 +75,7 @@ static async Task InitializeWorldStateAsync(
         .FirstOrDefaultAsync(
             world => world.WorldId == "atlantis-welcome");
 
-    if (false && persistedWorld != null)
+    if (persistedWorld != null)
     {
         var world = new Atlantis.Api.Models.World
         {

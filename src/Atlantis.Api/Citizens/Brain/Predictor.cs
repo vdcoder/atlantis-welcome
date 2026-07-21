@@ -17,10 +17,6 @@ namespace Atlantis.Api.Citizens.Brain
 
         public Prediction Predict(Context context, Position currentPosition)
         {
-            return new TouchPrediction(
-        TargetQuery: "visitor",
-        Text: "Hello privately.");
-
             var value = Random.Shared.Next(100);
 
             if (value < 30) // Do nothing / wait
