@@ -1,12 +1,14 @@
 ﻿using Atlantis.Api.Data;
 using Atlantis.Api.Economy.Accounts;
 using Atlantis.Api.Economy.Ledger;
+using Atlantis.Api.IntegrationTests.Infrastructure;
 using Atlantis.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Atlantis.Api.IntegrationTests.Economy;
 
 public sealed class LedgerServiceIntegrationTests
+    : IsolatedDatabaseTest
 {
     private const decimal TestPaymentAmount = 10.00m;
 
@@ -247,24 +249,5 @@ public sealed class LedgerServiceIntegrationTests
         Assert.Equal(
             entryCountBefore,
             entryCountAfter);
-    }
-
-    private static AtlantisDbContext CreateDbContext()
-    {
-        var connectionString =
-            Environment.GetEnvironmentVariable(
-                "ATLANTIS_TEST_CONNECTION")
-            ?? "Host=localhost;Port=5432;" +
-               "Database=atlantis;" +
-               "Username=atlantis;" +
-               "Password=atlantis-dev-password";
-
-        var options =
-            new DbContextOptionsBuilder<AtlantisDbContext>()
-                .UseNpgsql(connectionString)
-                .EnableDetailedErrors()
-                .Options;
-
-        return new AtlantisDbContext(options);
     }
 }

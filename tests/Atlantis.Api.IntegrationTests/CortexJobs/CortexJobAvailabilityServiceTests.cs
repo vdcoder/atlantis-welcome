@@ -1,15 +1,13 @@
 ﻿using Atlantis.Api.Citizens.Brain.CortexJobs.Domain;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Tasks;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Assignments;
-using Atlantis.Api.Data;
+using Atlantis.Api.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Atlantis.Api.IntegrationTests.CortexJobs;
 
-[CollectionDefinition(
-    "Cortex database tests",
-    DisableParallelization = true)]
 public sealed class CortexJobAvailabilityServiceTests
+    : IsolatedDatabaseTest
 {
     private static readonly Guid
         OrestesSimulateCitizenPassQualificationId =
@@ -198,24 +196,5 @@ public sealed class CortexJobAvailabilityServiceTests
         Assert.False(
             await dbContext.CortexTaskAssignments
                 .AnyAsync());
-    }
-
-    private static AtlantisDbContext CreateDbContext()
-    {
-        var connectionString =
-            Environment.GetEnvironmentVariable(
-                "ATLANTIS_TEST_CONNECTION")
-            ?? "Host=localhost;Port=5432;" +
-               "Database=atlantis;" +
-               "Username=atlantis;" +
-               "Password=atlantis-dev-password";
-
-        var options =
-            new DbContextOptionsBuilder<AtlantisDbContext>()
-                .UseNpgsql(connectionString)
-                .EnableDetailedErrors()
-                .Options;
-
-        return new AtlantisDbContext(options);
     }
 }

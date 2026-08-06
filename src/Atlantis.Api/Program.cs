@@ -60,9 +60,14 @@ var connectionInfo = new NpgsqlConnectionStringBuilder(connectionString);
 Console.WriteLine(
     $"Atlantis environment: {builder.Environment.EnvironmentName}");
 
+var databaseTarget =
+    builder.Environment.IsEnvironment("Testing")
+        ? "Testing"
+        : "Development";
+
 Console.WriteLine(
     $"Atlantis database target: " +
-    (builder.Environment.IsEnvironment("Testing") ? "Testing" : "Development") + " - " +
+    $"{databaseTarget} - " +
     $"{connectionInfo.Host}:" +
     $"{connectionInfo.Port}/" +
     $"{connectionInfo.Database}");
@@ -246,9 +251,6 @@ using (var scope = app.Services.CreateScope())
         dbContext,
         registeredWorldState);
 
-    await EconomySeed.EnsureSeededAsync(
-        dbContext);
-
     var sponsorshipService =
         scope.ServiceProvider
             .GetRequiredService<
@@ -258,20 +260,8 @@ using (var scope = app.Services.CreateScope())
         dbContext,
         sponsorshipService);
 
-    await CortexJobDefinitionSeed.EnsureSeededAsync(
+    await AtlantisDatabaseSeed.EnsureSeededAsync(
         dbContext);
-
-    await CortexJobEmploymentSeed.EnsureSeededAsync(
-        dbContext);
-
-    var cortexTaskCreationService =
-        scope.ServiceProvider
-            .GetRequiredService<
-                CortexTaskCreationService>();
-
-    await CortexTaskSeed.EnsureSeededAsync(
-        dbContext,
-        cortexTaskCreationService);
 
     if (!productionVerifier.IsProduction)
     {
