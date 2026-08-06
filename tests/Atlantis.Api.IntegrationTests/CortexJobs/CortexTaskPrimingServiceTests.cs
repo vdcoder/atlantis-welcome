@@ -4,16 +4,15 @@ using Atlantis.Api.Citizens.Brain.CortexJobs.Onboarding;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Qualifications;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Tasks;
 using Atlantis.Api.Data;
+using Atlantis.Api.Economy.Accounts;
+using Atlantis.Api.IntegrationTests.Infrastructure;
 using Atlantis.Api.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
-using Atlantis.Api.Economy.Accounts;
 
 namespace Atlantis.Api.IntegrationTests.CortexJobs;
 
-[CollectionDefinition(
-    "Cortex database tests",
-    DisableParallelization = true)]
 public sealed class CortexTaskPrimingServiceTests
+    : IsolatedDatabaseTest
 {
     private static readonly Guid QualificationId =
         Guid.Parse(
@@ -52,23 +51,18 @@ public sealed class CortexTaskPrimingServiceTests
         await using var dbContext =
             CreateDbContext();
 
-        await ResetPrimingStateAsync(
+        var now =
+            await GetEligibleTimeAsync(
+                dbContext);
+
+        await SetAvailabilityAsync(
             dbContext,
-            isAvailable: false);
+            isAvailable: false,
+            changedAt: now.AddMinutes(-1));
 
         var service =
             new CortexTaskPrimingService(
                 dbContext);
-
-        var now =
-            new DateTimeOffset(
-                2026,
-                7,
-                23,
-                18,
-                0,
-                0,
-                TimeSpan.Zero);
 
         var result =
             await service
@@ -111,18 +105,16 @@ public sealed class CortexTaskPrimingServiceTests
             CreateDbContext();
 
         var now =
-            new DateTimeOffset(
-                2026,
-                7,
-                23,
-                18,
-                0,
-                0,
-                TimeSpan.Zero);
+            await GetEligibleTimeAsync(
+                dbContext);
 
-        await ResetPrimingStateAsync(
+        await SetAvailabilityAsync(
             dbContext,
             isAvailable: true,
+            changedAt: now.AddMinutes(-1));
+
+        await SetDefinitionDeactivatedAtAsync(
+            dbContext,
             deactivatedAt: now);
 
         var service =
@@ -167,23 +159,18 @@ public sealed class CortexTaskPrimingServiceTests
         await using var dbContext =
             CreateDbContext();
 
-        await ResetPrimingStateAsync(
+        var now =
+            await GetEligibleTimeAsync(
+                dbContext);
+
+        await SetAvailabilityAsync(
             dbContext,
-            isAvailable: true);
+            isAvailable: true,
+            changedAt: now.AddMinutes(-1));
 
         var service =
             new CortexTaskPrimingService(
                 dbContext);
-
-        var now =
-            new DateTimeOffset(
-                2026,
-                7,
-                23,
-                18,
-                0,
-                0,
-                TimeSpan.Zero);
 
         var result =
             await service
@@ -274,18 +261,13 @@ public sealed class CortexTaskPrimingServiceTests
             CreateDbContext();
 
         var now =
-            new DateTimeOffset(
-                2026,
-                7,
-                23,
-                18,
-                0,
-                0,
-                TimeSpan.Zero);
+            await GetEligibleTimeAsync(
+                dbContext);
 
-        await ResetPrimingStateAsync(
+        await SetAvailabilityAsync(
             dbContext,
-            isAvailable: true);
+            isAvailable: true,
+            changedAt: now.AddMinutes(-1));
 
         var existingAssignmentId =
             Guid.NewGuid();
@@ -363,18 +345,13 @@ public sealed class CortexTaskPrimingServiceTests
             CreateDbContext();
 
         var now =
-            new DateTimeOffset(
-                2026,
-                7,
-                24,
-                12,
-                0,
-                0,
-                TimeSpan.Zero);
+            await GetEligibleTimeAsync(
+                dbContext);
 
-        await ResetPrimingStateAsync(
+        await SetAvailabilityAsync(
             dbContext,
-            isAvailable: true);
+            isAvailable: true,
+            changedAt: now.AddMinutes(-1));
 
         await CreateSecondQualificationAndTaskAsync(
             dbContext,
@@ -442,19 +419,17 @@ public sealed class CortexTaskPrimingServiceTests
     }
 
     private static async Task
-    CreateSecondQualificationAndTaskAsync(
-        AtlantisDbContext dbContext,
-        DateTimeOffset now)
+        CreateSecondQualificationAndTaskAsync(
+            AtlantisDbContext dbContext,
+            DateTimeOffset now)
     {
-        await DeleteSecondQualificationFixtureAsync(dbContext);
-
         var definition =
             new CortexJobDefinitionEntity
             {
                 Id = SecondDefinitionId,
 
                 EmployerAccountId =
-            KnownMoneyAccounts.AtlantisDevelopmentFundId,
+                    KnownMoneyAccounts.AtlantisDevelopmentFundId,
 
                 Name =
                     "Second Job Definition",
@@ -572,97 +547,11 @@ public sealed class CortexTaskPrimingServiceTests
         dbContext.ChangeTracker.Clear();
     }
 
-    private static async Task
-    DeleteSecondQualificationFixtureAsync(
-        AtlantisDbContext dbContext)
+    private static async Task SetAvailabilityAsync(
+    AtlantisDbContext dbContext,
+    bool isAvailable,
+    DateTimeOffset changedAt)
     {
-        await dbContext.CortexTaskAssignments
-            .Where(entity =>
-                entity.CortexTaskId == SecondTaskId)
-            .ExecuteDeleteAsync();
-
-        await dbContext.SimulateCitizenPassTasks
-            .Where(entity =>
-                entity.CortexTaskId == SecondTaskId)
-            .ExecuteDeleteAsync();
-
-        await dbContext.CortexTasks
-            .Where(entity =>
-                entity.Id == SecondTaskId)
-            .ExecuteDeleteAsync();
-
-        await dbContext.WorkerCortexJobAvailability
-            .Where(entity =>
-                entity.WorkerCortexJobQualificationId ==
-                    SecondQualificationId)
-            .ExecuteDeleteAsync();
-
-        await dbContext.WorkerCortexJobQualifications
-            .Where(entity =>
-                entity.Id == SecondQualificationId)
-            .ExecuteDeleteAsync();
-
-        await dbContext.CortexJobApplications
-            .Where(entity =>
-                entity.Id == SecondApplicationId)
-            .ExecuteDeleteAsync();
-
-        await dbContext.CortexJobScheduleConditions
-            .Where(entity =>
-                entity.CortexJobDefinitionId ==
-                    SecondDefinitionId)
-            .ExecuteDeleteAsync();
-
-        await dbContext.CortexJobDefinitions
-            .Where(entity =>
-                entity.Id == SecondDefinitionId)
-            .ExecuteDeleteAsync();
-
-        dbContext.ChangeTracker.Clear();
-    }
-
-    private static async Task ResetPrimingStateAsync(
-        AtlantisDbContext dbContext,
-        bool isAvailable,
-        DateTimeOffset? deactivatedAt = null)
-    {
-        await DeleteSecondQualificationFixtureAsync(dbContext);
-
-        await dbContext.CortexTaskAssignments
-            .ExecuteDeleteAsync();
-
-        var task =
-            await dbContext.CortexTasks
-                .SingleAsync(
-                    entity =>
-                        entity.Id == TaskId);
-
-        task.Status =
-            (int)CortexTaskStatus.Available;
-
-        task.UnavailableAt =
-            null;
-
-        var definition =
-            await dbContext.CortexJobDefinitions
-                .SingleAsync(
-                    entity =>
-                        entity.Id == DefinitionId);
-
-        definition.DeactivatedAt =
-            deactivatedAt;
-
-        var qualification =
-            await dbContext
-                .WorkerCortexJobQualifications
-                .SingleAsync(
-                    entity =>
-                        entity.Id == QualificationId);
-
-        qualification.Status =
-            (int)WorkerCortexJobQualificationStatus
-                .Approved;
-
         var availability =
             await dbContext.WorkerCortexJobAvailability
                 .SingleAsync(
@@ -675,34 +564,43 @@ public sealed class CortexTaskPrimingServiceTests
             isAvailable;
 
         availability.ChangedAt =
-            new DateTimeOffset(
-                2026,
-                7,
-                23,
-                17,
-                0,
-                0,
-                TimeSpan.Zero);
+            changedAt;
 
         await dbContext.SaveChangesAsync();
 
         dbContext.ChangeTracker.Clear();
     }
 
-    private static AtlantisDbContext CreateDbContext()
+    private static async Task SetDefinitionDeactivatedAtAsync(
+        AtlantisDbContext dbContext,
+        DateTimeOffset? deactivatedAt)
     {
-        var connectionString =
-            Environment.GetEnvironmentVariable(
-                "ATLANTIS_TEST_CONNECTION")
-            ?? throw new InvalidOperationException(
-                "ATLANTIS_TEST_CONNECTION is not configured.");
+        var definition =
+            await dbContext.CortexJobDefinitions
+                .SingleAsync(
+                    entity =>
+                        entity.Id == DefinitionId);
 
-        var options =
-            new DbContextOptionsBuilder<AtlantisDbContext>()
-                .UseNpgsql(connectionString)
-                .EnableDetailedErrors()
-                .Options;
+        definition.DeactivatedAt =
+            deactivatedAt;
 
-        return new AtlantisDbContext(options);
+        await dbContext.SaveChangesAsync();
+
+        dbContext.ChangeTracker.Clear();
+    }
+
+    private static async Task<DateTimeOffset>
+        GetEligibleTimeAsync(
+            AtlantisDbContext dbContext)
+    {
+        var availableAt =
+            await dbContext.CortexTasks
+                .Where(entity =>
+                    entity.Id == TaskId)
+                .Select(entity =>
+                    entity.AvailableAt)
+                .SingleAsync();
+
+        return availableAt.Value.AddMinutes(1);
     }
 }
