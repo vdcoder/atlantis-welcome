@@ -26,6 +26,15 @@ namespace Atlantis.Api.World.Actions
                 MoveEntityRequest moveRequest =>
                     ProcessAsync(moveRequest),
 
+                TurnEntityTorsoRequest turnTorsoRequest =>
+                    ProcessAsync(turnTorsoRequest),
+
+                SetEntityGazeRequest setGazeRequest =>
+                    ProcessAsync(setGazeRequest),
+
+                FaceAndLookRequest faceAndLookRequest =>
+                    ProcessAsync(faceAndLookRequest),
+
                 SayRequest sayRequest =>
                     ProcessAsync(sayRequest),
 
@@ -195,6 +204,134 @@ namespace Atlantis.Api.World.Actions
                 target.Type);
 
             return [];
+        }
+
+        private async Task<IReadOnlyList<WorldTransition>> ProcessAsync(
+            TurnEntityTorsoRequest request)
+        {
+            var entity =
+                GetAuthorizedEmbodiedTarget(
+                    request.ActorId,
+                    request.TargetEntityId);
+
+            var torsoFront =
+                NormalizeHorizontalDirection(
+                    request.TorsoFront);
+
+            var transition =
+                new EntityTorsoTurnedTransition(
+                    entity.Id,
+                    torsoFront);
+
+            await _transitionProcessor.ApplyAsync(
+                transition,
+                _state);
+
+            return [transition];
+        }
+
+        private async Task<IReadOnlyList<WorldTransition>> ProcessAsync(
+            SetEntityGazeRequest request)
+        {
+            var entity =
+                GetAuthorizedEmbodiedTarget(
+                    request.ActorId,
+                    request.TargetEntityId);
+
+            var gazeDirection =
+                request.GazeDirection.Normalize();
+
+            var transition =
+                new EntityGazeChangedTransition(
+                    entity.Id,
+                    gazeDirection);
+
+            await _transitionProcessor.ApplyAsync(
+                transition,
+                _state);
+
+            return [transition];
+        }
+
+        private async Task<IReadOnlyList<WorldTransition>> ProcessAsync(
+            FaceAndLookRequest request)
+        {
+            var entity =
+                GetAuthorizedEmbodiedTarget(
+                    request.ActorId,
+                    request.TargetEntityId);
+
+            var torsoFront =
+                NormalizeHorizontalDirection(
+                    request.Direction);
+
+            var gazeDirection =
+                request.Direction.Normalize();
+
+            var transitions =
+                new WorldTransition[]
+                {
+                    new EntityTorsoTurnedTransition(
+                        entity.Id,
+                        torsoFront),
+
+                    new EntityGazeChangedTransition(
+                        entity.Id,
+                        gazeDirection)
+                };
+
+            await _transitionProcessor.ApplyAsync(
+                transitions,
+                _state);
+
+            return transitions;
+        }
+
+        private Entity GetAuthorizedEmbodiedTarget(
+            string actorId,
+            string targetEntityId)
+        {
+            _ =
+                _state.World.Entities
+                    .SingleOrDefault(
+                        entity =>
+                            entity.Id == actorId)
+                ?? throw new EntityNotFoundException(
+                    actorId);
+
+            var target =
+                _state.World.Entities
+                    .SingleOrDefault(
+                        entity =>
+                            entity.Id == targetEntityId)
+                ?? throw new EntityNotFoundException(
+                    targetEntityId);
+
+            if (actorId != targetEntityId)
+            {
+                throw new InvalidOperationException(
+                    "An entity may currently orient only itself.");
+            }
+
+            if (target.Embodiment is null)
+            {
+                throw new InvalidOperationException(
+                    $"Entity '{target.Id}' is not embodied.");
+            }
+
+            return target;
+        }
+
+        private static Direction NormalizeHorizontalDirection(
+            Direction direction)
+        {
+            ArgumentNullException.ThrowIfNull(direction);
+
+            return new Direction(
+                direction.X,
+                0f,
+                direction.Z)
+                .Normalize();
         }
 
         private static float Distance(

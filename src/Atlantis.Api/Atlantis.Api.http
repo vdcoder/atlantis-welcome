@@ -1,4 +1,5 @@
-@Atlantis.Api_HostAddress = http://localhost:32769
+@Atlantis.Api_HostAddress = http://localhost:5130
+@Atlantis.Api_HostAddress_2 = http://localhost:5131
 
 ### Get world - Orestes at (0, 0, 0)
 GET {{Atlantis.Api_HostAddress}}/api/world
@@ -24,5 +25,31 @@ GET {{Atlantis.Api_HostAddress}}/api/world
 Accept: application/json
 
 ###
+POST {{Atlantis.Api_HostAddress_2}}/api/production/simulate-citizen-pass/work-orders
+Content-Type: application/json
 
+{
+  "requestId": "6fb360de-92d3-473f-a64c-41b5defc1881",
+  "developmentWorldId": "development-world-001",
+  "scenarioId": "recorded-replay-smoke-test",
+  "simulatedCitizenId": "simba-001",
+  "sequenceNumber": 1,
+  "contextContractVersion": 1,
+  "contextHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "contextSerialized": "{\"bodyEntityId\":\"orestes\",\"observedWorldRevision\":2618,\"observedAt\":\"2026-08-05T17:40:00Z\"}"
+}
 
+###
+POST http://localhost:5131/api/production/simulate-citizen-pass/work-orders
+Content-Type: application/json
+
+{
+  "requestId": "30320ae5-716c-4d93-9a78-77f695284a07",
+  "developmentWorldId": "development-world-001",
+  "scenarioId": "recorded-replay-smoke-test",
+  "simulatedCitizenId": "simba-001",
+  "sequenceNumber": 20,
+  "contextContractVersion": 1,
+  "contextHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "contextSerialized": "{\"bodyEntityId\":\"orestes\",\"observedWorldRevision\":2953,\"observedAt\":\"2026-08-06T14:46:49.6603913+00:00\"}"
+}

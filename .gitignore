@@ -7,6 +7,10 @@ Temp/
 Logs/
 UserSettings/
 .env
+.env.*
+!.env.example
 appsettings.*.json
 !appsettings.json
 .database-snapshots/
+run-true-world-integration.ps1
+run-test.ps1

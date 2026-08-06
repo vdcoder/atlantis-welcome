@@ -1,6 +1,8 @@
-using Atlantis.Api.Citizens.AgentKernel;
+using Atlantis.Api.Citizens.Brain.CortexContext.DynamicContext.Generators;
+using Atlantis.Api.Citizens.Brain.CortexJobs.Tasks;
+using Atlantis.Api.Citizens.Brain.CortexTools;
+using Atlantis.Api.Citizens.Brain.CortexJobs.Simulation;
 using Atlantis.Api.Models;
-using Microsoft.Build.Tasks;
 
 namespace Atlantis.Api.Citizens.Brain
 {
@@ -15,16 +17,84 @@ namespace Atlantis.Api.Citizens.Brain
             "A visitor is nearby."
         ];
 
-        public Prediction Predict(Context context, Position currentPosition)
-        {
-            var value = Random.Shared.Next(100);
+        private readonly
+            SimulateCitizenPassDevelopmentResultFactory
+            _simulationResultFactory;
 
-            if (value < 30) // Do nothing / wait
+        public Predictor(
+            SimulateCitizenPassDevelopmentResultFactory simulationResultFactory)
+        {
+            _simulationResultFactory = simulationResultFactory ??
+                throw new ArgumentNullException(
+                    nameof(simulationResultFactory));
+        }
+
+        public Task<CitizenCognitiveOutput> PredictAsync(
+            CortexContext.CortexContext context,
+            Position currentPosition,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(
+                context);
+
+            ArgumentNullException.ThrowIfNull(
+                currentPosition);
+
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+
+            var primedTaskGenerator =
+                context.DynamicContext
+                    .FindGenerator<
+                        PrimedCortexTaskContextGenerator>();
+
+            var primedTask =
+                primedTaskGenerator?.GeneratedTask;
+
+            if (primedTask is not null &&
+                string.Equals(
+                    primedTask.CortexTaskType,
+                    CortexTaskResultTypes
+                        .SimulateCitizenPass,
+                    StringComparison.Ordinal))
             {
-                return new WaitPrediction();
+                return Task.FromResult(
+                    new CitizenCognitiveOutput
+                    {
+                        EmbodiedPredictions =
+                        [
+                            new WaitPrediction()
+                        ],
+
+                        CortexToolCalls =
+                        [
+                            new CompleteCortexTaskCall
+                            {
+                                AssignmentId =
+                                    primedTask.AssignmentId,
+
+                                ResultSerialized =
+                                    _simulationResultFactory
+                                        .CreateSerializedResult(
+                                            primedTask)
+                            }
+                        ]
+                    });
             }
 
-            if (value < 30 + 25)
+
+            var value =
+                Random.Shared.Next(100);
+
+            if (value < 25)
+            {
+                return Task.FromResult(
+                    Output(
+                        new WaitPrediction()));
+            }
+
+            if (value < 45)
             {
                 var offsetX =
                     Random.Shared.NextSingle() * 4f - 2f;
@@ -32,30 +102,54 @@ namespace Atlantis.Api.Citizens.Brain
                 var offsetZ =
                     Random.Shared.NextSingle() * 4f - 2f;
 
-                return new MovePrediction(
-                    currentPosition.X + offsetX,
-                    currentPosition.Z + offsetZ);
+                return Task.FromResult(
+                    Output(
+                        new MovePrediction(
+                            currentPosition.X + offsetX,
+                            currentPosition.Z + offsetZ)));
             }
 
-            if (value < 30 + 25 + 25)
+            if (value < 60)
             {
-                return new SayPrediction(
-                Phrases[Random.Shared.Next(Phrases.Length)]);
+                var angle =
+                    Random.Shared.NextSingle() *
+                    MathF.Tau;
+
+                return Task.FromResult(
+                    Output(
+                        new FaceAndLookPrediction(
+                            new Direction(
+                                MathF.Sin(angle),
+                                0f,
+                                MathF.Cos(angle)))));
             }
 
-            if (context.NearbyObjects.Count > 0)
+            if (value < 80)
             {
-                var target =
-                    context.NearbyObjects[
-                        Random.Shared.Next(
-                            context.NearbyObjects.Count)];
-
-                return new TouchPrediction(
-                    TargetQuery: target.Type,
-                    Text: "Hello privately.");
+                return Task.FromResult(
+                    Output(
+                        new SayPrediction(
+                            Phrases[
+                                Random.Shared.Next(
+                                    Phrases.Length)])));
             }
 
-            return new WaitPrediction();
+            return Task.FromResult(
+                Output(
+                    new WaitPrediction()));
+        }
+
+        private static CitizenCognitiveOutput Output(
+            params Prediction[] predictions)
+        {
+            return new CitizenCognitiveOutput
+            {
+                EmbodiedPredictions =
+                    predictions,
+
+                CortexToolCalls =
+                    Array.Empty<CortexToolCall>()
+            };
         }
     }
 }

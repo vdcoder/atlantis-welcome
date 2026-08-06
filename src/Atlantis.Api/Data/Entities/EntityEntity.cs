@@ -21,5 +21,13 @@ namespace Atlantis.Api.Data.Entities
         public string? PrivateMessageText { get; set; }
         public DateTime? PrivateMessageDeliveredAt { get; set; }
 
+        public float? TorsoFrontX { get; set; }
+        public float? TorsoFrontY { get; set; }
+        public float? TorsoFrontZ { get; set; }
+
+        public float? GazeDirectionX { get; set; }
+        public float? GazeDirectionY { get; set; }
+        public float? GazeDirectionZ { get; set; }
+
     }
 }
