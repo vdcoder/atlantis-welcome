@@ -85,6 +85,37 @@ namespace Atlantis.Api.World
                             persistedEntity.PrivateMessageText = null;
                             persistedEntity.PrivateMessageDeliveredAt = null;
                         }
+
+                        // Embodiment
+                        if (entity.Embodiment is not null)
+                        {
+                            persistedEntity.TorsoFrontX =
+                                entity.Embodiment.TorsoFront.X;
+
+                            persistedEntity.TorsoFrontY =
+                                entity.Embodiment.TorsoFront.Y;
+
+                            persistedEntity.TorsoFrontZ =
+                                entity.Embodiment.TorsoFront.Z;
+
+                            persistedEntity.GazeDirectionX =
+                                entity.Embodiment.GazeDirection.X;
+
+                            persistedEntity.GazeDirectionY =
+                                entity.Embodiment.GazeDirection.Y;
+
+                            persistedEntity.GazeDirectionZ =
+                                entity.Embodiment.GazeDirection.Z;
+                        }
+                        else
+                        {
+                            persistedEntity.TorsoFrontX = null;
+                            persistedEntity.TorsoFrontY = null;
+                            persistedEntity.TorsoFrontZ = null;
+                            persistedEntity.GazeDirectionX = null;
+                            persistedEntity.GazeDirectionY = null;
+                            persistedEntity.GazeDirectionZ = null;
+                        }
                     }
                 }
 

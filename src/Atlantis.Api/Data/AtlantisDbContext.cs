@@ -1,4 +1,5 @@
 using Atlantis.Api.Data.Entities;
+using Atlantis.Api.Development.Predictions.Persistence;
 using Atlantis.Api.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +22,53 @@ public sealed class AtlantisDbContext : DbContext
 
     public DbSet<LedgerEntryEntity> LedgerEntries =>
         Set<LedgerEntryEntity>();
+
+    public DbSet<CortexJobDefinitionEntity> CortexJobDefinitions =>
+        Set<CortexJobDefinitionEntity>();
+
+    public DbSet<CortexJobScheduleConditionEntity> CortexJobScheduleConditions =>
+        Set<CortexJobScheduleConditionEntity>();
+
+    public DbSet<CortexJobApplicationEntity> CortexJobApplications =>
+        Set<CortexJobApplicationEntity>();
+
+    public DbSet<WorkerCortexJobQualificationEntity> WorkerCortexJobQualifications =>
+            Set<WorkerCortexJobQualificationEntity>();
+
+    public DbSet<WorkerCortexJobAvailabilityEntity> WorkerCortexJobAvailability =>
+            Set<WorkerCortexJobAvailabilityEntity>();
+
+    public DbSet<CortexTaskEntity> CortexTasks =>
+        Set<CortexTaskEntity>();
+
+    public DbSet<SimulateCitizenPassTaskEntity> SimulateCitizenPassTasks =>
+        Set<SimulateCitizenPassTaskEntity>();
+
+    public DbSet<CortexTaskRemunerationEntity> CortexTaskRemunerations =>
+        Set<CortexTaskRemunerationEntity>();
+
+    public DbSet<SimulateCitizenPassWorkOrderEntity> SimulateCitizenPassWorkOrders =>
+        Set<SimulateCitizenPassWorkOrderEntity>();
+
+    public DbSet<CortexTaskAssignmentEntity> CortexTaskAssignments =>
+        Set<CortexTaskAssignmentEntity>();
+
+    public DbSet<CortexTaskResultEntity> CortexTaskResults =>
+        Set<CortexTaskResultEntity>();
+
+    public DbSet<CortexJobInboxMessageEntity> CortexJobInboxMessages =>
+        Set<CortexJobInboxMessageEntity>();
+
+    public DbSet<CitizenSponsorshipEntity> CitizenSponsorships =>
+        Set<CitizenSponsorshipEntity>();
+
+    public DbSet<DevelopmentPredictionRequestEntity>
+    DevelopmentPredictionRequests =>
+        Set<DevelopmentPredictionRequestEntity>();
+
+    public DbSet<DevelopmentRecordedPredictionEntity>
+        DevelopmentRecordedPredictions =>
+            Set<DevelopmentRecordedPredictionEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -136,6 +184,24 @@ public sealed class AtlantisDbContext : DbContext
 
         entity.Property(value => value.PrivateMessageDeliveredAt)
             .HasColumnName("private_message_delivered_at");
+
+        entity.Property(value => value.TorsoFrontX)
+            .HasColumnName("torso_front_x");
+
+        entity.Property(value => value.TorsoFrontY)
+            .HasColumnName("torso_front_y");
+
+        entity.Property(value => value.TorsoFrontZ)
+            .HasColumnName("torso_front_z");
+
+        entity.Property(value => value.GazeDirectionX)
+            .HasColumnName("gaze_direction_x");
+
+        entity.Property(value => value.GazeDirectionY)
+            .HasColumnName("gaze_direction_y");
+
+        entity.Property(value => value.GazeDirectionZ)
+            .HasColumnName("gaze_direction_z");
 
         entity.HasOne(value => value.World)
             .WithMany(value => value.Entities)

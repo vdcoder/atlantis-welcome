@@ -4,33 +4,50 @@ namespace Atlantis.Api.Citizens.Runtime
 {
     public sealed class CitizenHostedService : BackgroundService
     {
-        private readonly CitizenRuntime _runtime;
-        private readonly ILogger<CitizenHostedService> _logger;
-        private readonly TimeSpan _interval = TimeSpan.FromSeconds(5);
+        private readonly IServiceScopeFactory
+        _scopeFactory;
+
+        private readonly ILogger<CitizenHostedService>
+            _logger;
+
+        private readonly TimeSpan _interval =
+            TimeSpan.FromSeconds(5);
 
         public CitizenHostedService(
-            CitizenRuntime runtime,
+            IServiceScopeFactory scopeFactory,
             ILogger<CitizenHostedService> logger)
         {
-            _runtime = runtime;
+            _scopeFactory = scopeFactory;
             _logger = logger;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(
+            CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Citizen agent loop started.");
+            _logger.LogInformation(
+                "\x1b[35mCitizen\x1b[0m agent loop started.");
 
-            var timer = new PeriodicTimer(_interval);
+            using var timer =
+                new PeriodicTimer(
+                    _interval);
 
             try
             {
-                while (await timer.WaitForNextTickAsync(stoppingToken))
+                while (await timer.WaitForNextTickAsync(
+                           stoppingToken))
                 {
                     try
                     {
-                        // For now, run the first citizen (Orestes by ID)
-                        // This can be extended to iterate over all autonomous citizens
-                        await _runtime.RunOneIterationAsync(
+                        await using var scope =
+                            _scopeFactory
+                                .CreateAsyncScope();
+
+                        var runtime =
+                            scope.ServiceProvider
+                                .GetRequiredService<
+                                    CitizenRuntime>();
+
+                        await runtime.RunOneIterationAsync(
                             "orestes",
                             stoppingToken);
                     }
@@ -44,8 +61,8 @@ namespace Atlantis.Api.Citizens.Runtime
             }
             finally
             {
-                timer.Dispose();
-                _logger.LogInformation("Citizen agent loop stopped.");
+                _logger.LogInformation(
+                    "\x1b[35mCitizen\x1b[0m agent loop stopped.");
             }
         }
     }
