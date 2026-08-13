@@ -1,12 +1,8 @@
-using Atlantis.Api.Citizens.Brain;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Assignments;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Context;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Domain;
 using Atlantis.Api.Citizens.Control;
-using Atlantis.Api.Citizens.Control.EmbodiedTools;
-using Atlantis.Api.Citizens.Interaction;
 using Atlantis.Api.Citizens.Perception;
-using Atlantis.Api.Models;
 using Atlantis.Api.World;
 using Atlantis.Api.World.EmbodiedControl;
 
@@ -14,52 +10,67 @@ namespace Atlantis.Api.Citizens.Runtime
 {
     public sealed class CitizenRuntime
     {
-        private readonly WorldRuntime _worldRuntime;
-        private readonly MoveTo _moveTool;
-        private readonly Say _sayTool;
-        private readonly Touch _touchTool;
-        private readonly TurnTorso _turnTorsoTool;
-        private readonly SetGaze _setGazeTool;
-        private readonly FaceAndLook _faceAndLookTool;
-        private readonly NearbyEntityPerception _perception;
-        private readonly SemanticReach _semanticReach;
-        private readonly CitizenControllerRegistry _controllerRegistry;
-        private readonly CortexToolCallExecutor _cortexToolCallExecutor;
-        private readonly CortexTaskPrimingService _cortexTaskPrimingService;
+        private readonly WorldRuntime
+        _worldRuntime;
 
-        private readonly IPrimedCortexTaskContextLoader _primedCortexTaskContextLoader;
-        private readonly SensoryOrbPerception _sensoryOrbPerception;
-        private readonly IServiceProvider _serviceProvider;
-        private readonly ILogger<CitizenRuntime> _logger;
+        private readonly NearbyEntityPerception
+            _perception;
+
+        private readonly CitizenControllerRegistry
+            _controllerRegistry;
+
+        private readonly CortexToolCallExecutor
+            _cortexToolCallExecutor;
+
+        private readonly CortexTaskPrimingService
+            _cortexTaskPrimingService;
+
+        private readonly IPrimedCortexTaskContextLoader
+            _primedCortexTaskContextLoader;
+
+        private readonly SensoryOrbPerception
+            _sensoryOrbPerception;
+
+        private readonly IServiceProvider
+            _serviceProvider;
+
+        private readonly EmbodiedPredictionExecutor
+            _predictionExecutor;
+
+        private readonly ILogger<CitizenRuntime>
+            _logger;
 
         public CitizenRuntime(
             WorldRuntime worldRuntime,
-            MoveTo moveTool,
-            Say sayTool,
-            Touch touchTool,
-            TurnTorso turnTorsoTool,
-            SetGaze setGazeTool,
-            FaceAndLook faceAndLookTool,
             NearbyEntityPerception perception,
-            SemanticReach semanticReach,
             CitizenControllerRegistry controllerRegistry,
             CortexToolCallExecutor cortexToolCallExecutor,
             CortexTaskPrimingService cortexTaskPrimingService,
             IPrimedCortexTaskContextLoader primedCortexTaskContextLoader,
             SensoryOrbPerception sensoryOrbPerception,
             IServiceProvider serviceProvider,
+            EmbodiedPredictionExecutor predictionExecutor,
             ILogger<CitizenRuntime> logger)
         {
-            _worldRuntime = worldRuntime;
-            _moveTool = moveTool;
-            _sayTool = sayTool;
-            _touchTool = touchTool;
-            _turnTorsoTool = turnTorsoTool;
-            _setGazeTool = setGazeTool;
-            _faceAndLookTool = faceAndLookTool;
-            _perception = perception;
-            _semanticReach = semanticReach;
-            _controllerRegistry = controllerRegistry;
+            _worldRuntime =
+                worldRuntime ??
+                throw new ArgumentNullException(
+                    nameof(worldRuntime));
+
+            _perception =
+                perception ??
+                throw new ArgumentNullException(
+                    nameof(perception));
+
+            _controllerRegistry =
+                controllerRegistry ??
+                throw new ArgumentNullException(
+                    nameof(controllerRegistry));
+
+            _cortexToolCallExecutor =
+                cortexToolCallExecutor ??
+                throw new ArgumentNullException(
+                    nameof(cortexToolCallExecutor));
 
             _cortexTaskPrimingService =
                 cortexTaskPrimingService ??
@@ -71,10 +82,25 @@ namespace Atlantis.Api.Citizens.Runtime
                 throw new ArgumentNullException(
                     nameof(primedCortexTaskContextLoader));
 
-            _cortexToolCallExecutor = cortexToolCallExecutor;
-            _sensoryOrbPerception = sensoryOrbPerception;
-            _serviceProvider = serviceProvider;
-            _logger = logger;
+            _sensoryOrbPerception =
+                sensoryOrbPerception ??
+                throw new ArgumentNullException(
+                    nameof(sensoryOrbPerception));
+
+            _serviceProvider =
+                serviceProvider ??
+                throw new ArgumentNullException(
+                    nameof(serviceProvider));
+
+            _predictionExecutor =
+                predictionExecutor ??
+                throw new ArgumentNullException(
+                    nameof(predictionExecutor));
+
+            _logger =
+                logger ??
+                throw new ArgumentNullException(
+                    nameof(logger));
         }
 
         public async Task RunOneIterationAsync(
@@ -124,16 +150,31 @@ namespace Atlantis.Api.Citizens.Runtime
                     citizen.Id,
                     _serviceProvider);
 
-            var nearbyObjects =
+            var nearbyEntityBindings =
                 _perception.Perceive(
                     citizen,
-                    snapshot.World);
+                    snapshot.World,
+                    observedAt);
 
-            var sensoryOrbs =
+            var nearbyEntities =
+                nearbyEntityBindings
+                    .Select(
+                        binding =>
+                            binding.TransparentEntity)
+                    .ToList();
+
+            var auditoryEventBindings =
                 _sensoryOrbPerception.Perceive(
                     citizen,
                     snapshot.World,
                     observedAt);
+
+            var auditoryEvents =
+                auditoryEventBindings
+                    .Select(
+                        binding =>
+                            binding.TransparentAuditoryEvent)
+                    .ToList();
 
             var controllerContext =
                 new EmbodiedControllerContext
@@ -147,17 +188,49 @@ namespace Atlantis.Api.Citizens.Runtime
                     ObservedAt =
                         observedAt,
 
-                    NearbyObjects =
-                        nearbyObjects,
+                    NearbyEntities =
+                        nearbyEntities,
 
-                    SensoryOrbs =
-                        sensoryOrbs,
+                    AuditoryEvents =
+                        auditoryEvents,
                 };
 
             var breath =
                 await controller.ProduceCitizenBreathAsync(
                     controllerContext,
                     cancellationToken);
+
+            _logger.LogInformation(
+                "Citizen {CitizenId} observing at {ObservedAt:O}. " +
+                "Snapshot has {OrbCount} orb(s).",
+                citizen.Id,
+                observedAt,
+                snapshot.World.Orbs.Count);
+
+            //foreach (var orb in snapshot.World.Orbs)
+            //{
+            //    _logger.LogInformation(
+            //        "Orb {OrbId}: source={SourceEntityId}, " +
+            //        "created={CreatedAt:O}, expires={ExpiresAt:O}, " +
+            //        "active={IsActive}",
+            //        orb.Id,
+            //        orb.SourceEntityId,
+            //        orb.CreatedAt,
+            //        orb.ExpiresAt,
+            //        orb.IsActiveAt(observedAt));
+            //}
+
+            //foreach (var orb in sensoryOrbs)
+            //{
+            //    _logger.LogInformation(
+            //        "PERCEIVED: Citizen {CitizenId} perceives {Modality} " +
+            //        "from {SourceEntityId} at {Distance:F2}m: {Content}",
+            //        citizen.Id,
+            //        orb.Modality,
+            //        orb.SourceEntityId,
+            //        orb.Distance,
+            //        orb.Content);
+            //}
 
             ValidateCitizenBreath(
                 citizen.Id,
@@ -185,9 +258,9 @@ namespace Atlantis.Api.Citizens.Runtime
                     citizen.Id,
                     prediction);
 
-                await ExecutePredictionAsync(
+                await _predictionExecutor.ExecuteAsync(
                     citizen,
-                    nearbyObjects,
+                    nearbyEntityBindings,
                     prediction,
                     cancellationToken);
             }
@@ -310,97 +383,6 @@ namespace Atlantis.Api.Citizens.Runtime
                     $"Controller for entity '{expectedEntityId}' " +
                     "returned a null prediction.");
             }
-        }
-
-        private async Task ExecutePredictionAsync(
-            Entity entity,
-            IReadOnlyList<PerceivedObject> nearbyObjects,
-            Prediction prediction,
-            CancellationToken cancellationToken = default)
-        {
-            switch (prediction)
-            {
-                case WaitPrediction:
-                    return;
-
-                case MovePrediction move:
-                    await _moveTool.MoveToAsync(
-                        entity.Id,
-                        move.X,
-                        move.Z);
-                    return;
-
-                case SayPrediction say:
-                    await _sayTool.SayAsync(
-                        entity.Id,
-                        say.Text);
-                    return;
-
-                case TouchPrediction touch:
-                    await ProcessTouchPredictionAsync(
-                        entity,
-                        nearbyObjects,
-                        touch);
-                    return;
-
-                case TurnTorsoPrediction turn:
-                    await _turnTorsoTool.TurnTorsoAsync(
-                        entity.Id,
-                        turn.TorsoFront);
-                    return;
-
-                case SetGazePrediction gaze:
-                    await _setGazeTool.SetGazeAsync(
-                        entity.Id,
-                        gaze.GazeDirection);
-                    return;
-
-                case FaceAndLookPrediction faceAndLook:
-                    await _faceAndLookTool.FaceAndLookAsync(
-                        entity.Id,
-                        faceAndLook.Direction);
-                    return;
-
-                default:
-                    throw new NotSupportedException(
-                        $"Unsupported prediction type " +
-                        $"'{prediction.GetType().Name}'.");
-            }
-        }
-
-        private async Task ProcessTouchPredictionAsync(
-            Entity entity,
-            IReadOnlyList<PerceivedObject> nearbyObjects,
-            TouchPrediction prediction)
-        {
-            var match =
-                _semanticReach.Resolve(
-                    prediction.TargetQuery,
-                    nearbyObjects);
-
-            if (match is null)
-            {
-                _logger.LogWarning(
-                    "Entity {EntityId} could not resolve touch target " +
-                    "'{TargetQuery}'.",
-                    entity.Id,
-                    prediction.TargetQuery);
-
-                return;
-            }
-
-            _logger.LogInformation(
-                "Semantic Reach resolved '{Query}' to {TargetId} " +
-                "at {Distance:F2}m with score {Score}.",
-                prediction.TargetQuery,
-                match.EntityId,
-                match.Distance,
-                match.Score);
-
-            await _touchTool.TouchAsync(
-                entity.Id,
-                match.EntityId,
-                prediction.Text);
         }
     }
 }

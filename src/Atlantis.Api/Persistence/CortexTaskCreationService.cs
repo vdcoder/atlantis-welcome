@@ -1,5 +1,4 @@
 ﻿using Atlantis.Api.Citizens.Brain.CortexJobs.Simulation;
-using Atlantis.Api.Data;
 using Atlantis.Api.Persistence.Mappers;
 using Microsoft.EntityFrameworkCore;
 

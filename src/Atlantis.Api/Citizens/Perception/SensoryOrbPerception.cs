@@ -1,78 +1,154 @@
-﻿using Atlantis.Api.Models;
-using Atlantis.Api.Models.Orbs;
+﻿using Atlantis.Api.Common;
+using Atlantis.Api.World.Entities;
 using Atlantis.Api.World.Orbs;
+using Atlantis.Api.World.Spatial;
 
 namespace Atlantis.Api.Citizens.Perception;
 
+public sealed record TransparentDirection(
+    Direction Direction);
+
+public sealed record TransparentAuditoryEvent(
+    string Reference,
+    TransparentDirection Direction,
+    float Volume,
+    string Content);
+
+public sealed record PerceivedAuditoryEventBinding(
+    Guid OrbId,
+    TransparentAuditoryEvent TransparentAuditoryEvent);
+
 public sealed class SensoryOrbPerception
 {
-    private readonly WorldOrbCollection
-        _orbCollection;
-
-    private readonly WorldOrbPositionResolver
+    private readonly OrbPositionResolver
         _positionResolver;
 
-    public SensoryOrbPerception(
-        WorldOrbCollection orbCollection,
-        WorldOrbPositionResolver positionResolver)
-    {
-        _orbCollection =
-            orbCollection ??
-            throw new ArgumentNullException(
-                nameof(orbCollection));
+    private readonly ISensoryPathResolver
+        _pathResolver;
 
+    public SensoryOrbPerception(
+        OrbPositionResolver positionResolver,
+        ISensoryPathResolver pathResolver)
+    {
         _positionResolver =
             positionResolver ??
             throw new ArgumentNullException(
                 nameof(positionResolver));
+
+        _pathResolver =
+            pathResolver ??
+            throw new ArgumentNullException(
+                nameof(pathResolver));
     }
 
-    public IReadOnlyList<PerceivedSensoryOrb> Perceive(
+    public IReadOnlyList<PerceivedAuditoryEventBinding> Perceive(
         Entity observer,
-        Models.World world,
+        World.World world,
         DateTimeOffset now)
     {
-        ArgumentNullException.ThrowIfNull(
-            observer);
+        ArgumentNullException.ThrowIfNull(observer);
+        ArgumentNullException.ThrowIfNull(world);
 
-        ArgumentNullException.ThrowIfNull(
-            world);
-
-        return _orbCollection
-            .GetActiveAt(now)
+        return world.Orbs
+            .Where(
+                orb =>
+                    orb.IsActiveAt(now))
             .OfType<SensoryOrb>()
-            .Select(orb =>
-            {
-                var worldPosition =
-                    _positionResolver.Resolve(
-                        orb,
-                        world);
-
-                var distance =
-                    Distance(
-                        observer.Position,
-                        worldPosition);
-
-                return new
+            .Where(
+                orb =>
+                    orb.Modality ==
+                        SensoryModality.Auditory)
+            .Where(
+                orb =>
+                    orb.TargetEntityIds is null ||
+                    orb.TargetEntityIds.Contains(
+                        observer.Id))
+            .Select(
+                orb =>
                 {
-                    Orb = orb,
-                    Distance = distance
-                };
-            })
-            .Where(item =>
-                item.Distance <=
-                item.Orb.Radius)
-            .OrderBy(item =>
-                item.Distance)
-            .ThenBy(item =>
-                item.Orb.CreatedAt)
-            .Select(item =>
-                new PerceivedSensoryOrb(
-                    item.Orb.Id,
-                    item.Orb.Modality,
-                    item.Orb.Content,
-                    item.Orb.Intensity,
-                    item.Distance))
+                    var worldPosition =
+                        _positionResolver.Resolve(
+                            orb,
+                            world);
+
+                    var distance =
+                        Distance(
+                            observer.Position,
+                            worldPosition);
+
+                    return new
+                    {
+                        Orb = orb,
+                        WorldPosition = worldPosition,
+                        Distance = distance
+                    };
+                })
+            .Where(
+                item =>
+                    item.Distance <=
+                        item.Orb.Radius)
+            .Where(
+                item =>
+                    _pathResolver.HasClearPath(
+                        item.WorldPosition,
+                        observer.Position,
+                        world))
+            .OrderBy(
+                item =>
+                    item.Distance)
+            .ThenBy(
+                item =>
+                    item.Orb.CreatedAt)
+            .ThenBy(
+                item =>
+                    item.Orb.Id)
+            .Select(
+                item =>
+                {
+                    var source =
+                        item.Orb.SourceEntityId is null
+                            ? null
+                            : world.Entities.FirstOrDefault(
+                                entity =>
+                                    entity.Id ==
+                                    item.Orb.SourceEntityId);
+
+                    var reference =
+                        source is null
+                            ? string.Empty
+                            : BuildVoiceReference(
+                                source);
+
+                    var direction =
+                        DirectionTo(
+                            observer.Position,
+                            item.WorldPosition);
+
+                    var volume =
+                        PerceivedVolume(
+                            item.Orb.Intensity,
+                            item.Distance,
+                            item.Orb.Radius);
+
+                    return new PerceivedAuditoryEventBinding(
+                        OrbId:
+                            item.Orb.Id,
+
+                        TransparentAuditoryEvent:
+                            new TransparentAuditoryEvent(
+                                Reference:
+                                    reference,
+
+                                Direction:
+                                    new TransparentDirection(
+                                        direction),
+
+                                Volume:
+                                    volume,
+
+                                Content:
+                                    item.Orb.Content));
+                })
             .ToArray();
     }
 
@@ -80,18 +156,61 @@ public sealed class SensoryOrbPerception
         Position left,
         Position right)
     {
-        var dx =
-            left.X - right.X;
-
-        var dy =
-            left.Y - right.Y;
-
-        var dz =
-            left.Z - right.Z;
+        var dx = left.X - right.X;
+        var dy = left.Y - right.Y;
+        var dz = left.Z - right.Z;
 
         return MathF.Sqrt(
             dx * dx +
             dy * dy +
             dz * dz);
+    }
+
+    private static string BuildVoiceReference(
+    Entity entity)
+    {
+        return string.Join(
+            " ",
+            entity.VoiceAttributes
+                .OrderBy(
+                    attribute =>
+                        attribute.Sequence)
+                .Select(
+                    attribute =>
+                        attribute.DisplayText));
+    }
+
+    private static Direction DirectionTo(
+        Position observer,
+        Position source)
+    {
+        return new Direction(
+            source.X - observer.X,
+            source.Y - observer.Y,
+            source.Z - observer.Z)
+            .Normalize();
+    }
+
+    private static float PerceivedVolume(
+        float intensity,
+        float distance,
+        float radius)
+    {
+        if (radius <= 0f)
+        {
+            return distance <= 0f
+                ? intensity
+                : 0f;
+        }
+
+        var attenuation =
+            1f -
+            Math.Clamp(
+                distance / radius,
+                0f,
+                1f);
+
+        return intensity *
+            attenuation;
     }
 }

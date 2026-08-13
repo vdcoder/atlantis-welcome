@@ -1,5 +1,5 @@
 ﻿using Atlantis.Api.Citizens.Perception;
-using Atlantis.Api.Models;
+using Atlantis.Api.World.Entities;
 
 namespace Atlantis.Api.World.EmbodiedControl;
 
@@ -11,15 +11,15 @@ public sealed record EmbodiedControllerContext
 
     public required DateTimeOffset ObservedAt { get; init; }
 
-    public required IReadOnlyList<PerceivedObject>
-        NearbyObjects
+    public required IReadOnlyList<TransparentEntity>
+        NearbyEntities
     {
         get;
         init;
     }
 
-    public required IReadOnlyList<PerceivedSensoryOrb>
-        SensoryOrbs
+    public required IReadOnlyList<TransparentAuditoryEvent>
+        AuditoryEvents
     {
         get;
         init;

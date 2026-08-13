@@ -1,6 +1,6 @@
-﻿using Atlantis.Api.Data;
-using Atlantis.Api.Economy.Currency;
-using Atlantis.Api.Persistence.Entities;
+﻿using Atlantis.Api.Economy.Currency;
+using Atlantis.Api.Persistence;
+using Atlantis.Api.Persistence.Records;
 using Microsoft.EntityFrameworkCore;
 
 namespace Atlantis.Api.Economy.Ledger;
@@ -143,7 +143,7 @@ public sealed class LedgerService
     }
 
     private static LedgerEntry Map(
-        LedgerEntryEntity entity)
+        LedgerEntryRecord entity)
     {
         return new LedgerEntry
         {
@@ -160,8 +160,8 @@ public sealed class LedgerService
     }
 
     private async Task<LedgerTransferResult> ExecuteAtomicTransferAsync(
-        MoneyAccountEntity fromAccount,
-        MoneyAccountEntity toAccount,
+        MoneyAccountRecord fromAccount,
+        MoneyAccountRecord toAccount,
         decimal amount,
         string reason,
         string? referenceType,
@@ -177,7 +177,7 @@ public sealed class LedgerService
             var transactionId = Guid.NewGuid();
             var createdAt = DateTimeOffset.UtcNow;
 
-            var debitEntity = new LedgerEntryEntity
+            var debitEntity = new LedgerEntryRecord
             {
                 Id = Guid.NewGuid(),
                 TransactionId = transactionId,
@@ -190,7 +190,7 @@ public sealed class LedgerService
                 CreatedAt = createdAt
             };
 
-            var creditEntity = new LedgerEntryEntity
+            var creditEntity = new LedgerEntryRecord
             {
                 Id = Guid.NewGuid(),
                 TransactionId = transactionId,
@@ -274,8 +274,8 @@ public sealed class LedgerService
     }
 
     private static void ValidateBalancedEntries(
-        LedgerEntryEntity debitEntry,
-        LedgerEntryEntity creditEntry)
+        LedgerEntryRecord debitEntry,
+        LedgerEntryRecord creditEntry)
     {
         if (debitEntry.TransactionId !=
             creditEntry.TransactionId)
@@ -336,8 +336,8 @@ public sealed class LedgerService
     }
 
     private static void ValidateAccountsForTransfer(
-        MoneyAccountEntity fromAccount,
-        MoneyAccountEntity toAccount)
+        MoneyAccountRecord fromAccount,
+        MoneyAccountRecord toAccount)
     {
         if (!fromAccount.IsActive)
         {

@@ -1,6 +1,6 @@
-﻿using Atlantis.Api.Data;
-using Atlantis.Api.Economy.Accounts;
+﻿using Atlantis.Api.Economy.Accounts;
 using Atlantis.Api.Economy.Ledger;
+using Atlantis.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Atlantis.Api.Citizens.Brain.CortexJobs

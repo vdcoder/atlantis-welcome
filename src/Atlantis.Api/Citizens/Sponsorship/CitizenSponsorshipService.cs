@@ -1,8 +1,6 @@
 ﻿using System.Data;
-using Atlantis.Api.Data;
-using Atlantis.Api.Economy.Accounts;
-using Atlantis.Api.Models;
-using Atlantis.Api.Persistence.Entities;
+using Atlantis.Api.Persistence;
+using Atlantis.Api.Persistence.Records;
 using Atlantis.Api.World;
 using Microsoft.EntityFrameworkCore;
 
@@ -146,7 +144,7 @@ public sealed class CitizenSponsorshipService
             }
 
             var entity =
-                new CitizenSponsorshipEntity
+                new CitizenSponsorshipRecord
                 {
                     Id = id,
 
@@ -318,7 +316,7 @@ public sealed class CitizenSponsorshipService
     }
 
     private static CitizenSponsorship Map(
-        CitizenSponsorshipEntity entity)
+        CitizenSponsorshipRecord entity)
     {
         return new CitizenSponsorship
         {

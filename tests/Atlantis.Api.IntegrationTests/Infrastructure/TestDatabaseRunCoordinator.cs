@@ -1,5 +1,5 @@
-﻿using Atlantis.Api.Data;
-using Atlantis.Api.Persistence;
+﻿using Atlantis.Api.Persistence;
+using Atlantis.Api.Persistence.Seed;
 using Microsoft.EntityFrameworkCore;
 
 namespace Atlantis.Api.IntegrationTests.Infrastructure;

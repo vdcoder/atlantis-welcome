@@ -492,12 +492,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db55a2f8a3f65a64698c3f5aec68fa26, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AtlantisWelcome.Interaction.FirstPersonWorldController
-  apiClient: {fileID: 624672418}
   worldLoader: {fileID: 624672417}
   playerCamera: {fileID: 1985766579}
-  actorId: orestes
-  entityId: orestes
-  movementStep: 1
+  entityId: visitor-default
+  movementSpeedMetersPerSecond: 3
   groundHeight: 0
   eyeHeight: 1.65
   mouseSensitivity: 2
@@ -979,6 +977,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 102952c2b63d90f45bd67665117ac5a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AtlantisWelcome.World.WorldSnapshotLoader
+  locallyControlledEntityId: visitor-default
   apiClient: {fileID: 624672418}
   citizenPrefab: {fileID: 796070916821189620, guid: e88368cb3eb5f7943af32dc527c5b790, type: 3}
   entityContainer: {fileID: 1962222066}
@@ -1006,6 +1005,54 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -1.6253, y: 5.2388, z: 1.80289}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &676135642
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 676135644}
+  - component: {fileID: 676135643}
+  m_Layer: 0
+  m_Name: PositionObservationReporter
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &676135643
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 676135642}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 298e25f694894e546843bd9729c43cf9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PositionObservationReporter
+  worldLoader: {fileID: 624672417}
+  apiBaseUrl: http://localhost:5130
+  entityId: visitor-default
+  reportIntervalSeconds: 0.1
+--- !u!4 &676135644
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 676135642}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2705,6 +2752,7 @@ SceneRoots:
   - {fileID: 624672419}
   - {fileID: 1962222066}
   - {fileID: 307632951}
+  - {fileID: 676135644}
   - {fileID: 1026426575}
   - {fileID: 551507627}
   - {fileID: 1878699054}

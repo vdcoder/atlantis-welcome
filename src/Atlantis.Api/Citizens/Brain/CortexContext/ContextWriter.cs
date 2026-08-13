@@ -37,4 +37,36 @@ public sealed class ContextWriter
     {
         return _builder.ToString();
     }
+
+    public void WriteEscaped(string value)
+    {
+        ArgumentNullException.ThrowIfNull(
+            value);
+
+        foreach (var character in value)
+        {
+            switch (character)
+            {
+                case '&':
+                    _builder.Append(
+                        "&amp;");
+                    break;
+
+                case '<':
+                    _builder.Append(
+                        "&lt;");
+                    break;
+
+                case '>':
+                    _builder.Append(
+                        "&gt;");
+                    break;
+
+                default:
+                    _builder.Append(
+                        character);
+                    break;
+            }
+        }
+    }
 }

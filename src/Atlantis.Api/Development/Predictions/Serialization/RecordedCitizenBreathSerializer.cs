@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using Atlantis.Api.Citizens.Brain;
+using Atlantis.Api.Common;
 using Atlantis.Api.Development.Predictions.Contracts;
-using Atlantis.Api.Models;
 
 namespace Atlantis.Api.Development.Predictions.Serialization;
 

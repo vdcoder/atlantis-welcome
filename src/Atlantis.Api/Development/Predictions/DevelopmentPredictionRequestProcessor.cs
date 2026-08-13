@@ -1,8 +1,8 @@
-﻿using Atlantis.Api.Data;
-using Atlantis.Api.Development.Predictions.Persistence;
-using Atlantis.Api.Development.Predictions.Remote;
+﻿using Atlantis.Api.Development.Predictions.Remote;
 using Atlantis.Api.Development.Predictions.Requests;
 using Atlantis.Api.Development.Predictions.Serialization;
+using Atlantis.Api.Persistence;
+using Atlantis.Api.Persistence.Records;
 using Microsoft.EntityFrameworkCore;
 
 namespace Atlantis.Api.Development.Predictions;
@@ -206,7 +206,7 @@ public sealed class DevelopmentPredictionRequestProcessor
             dbContext
                 .DevelopmentRecordedPredictions
                 .Add(
-                    new DevelopmentRecordedPredictionEntity
+                    new DevelopmentRecordedPredictionRecord
                     {
                         Id =
                             Guid.NewGuid(),

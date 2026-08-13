@@ -1,4 +1,5 @@
 ﻿using Atlantis.Api.Citizens.Perception;
+using Atlantis.Api.Common;
 
 namespace Atlantis.Api.Citizens.Brain.CortexContext.DynamicContext.Generators;
 
@@ -6,17 +7,17 @@ public sealed class SensoryOrbContextGenerator
     : IDynamicContextGenerator
 {
     private readonly IReadOnlyList<
-        PerceivedSensoryOrb>
-        _sensoryOrbs;
+        TransparentAuditoryEvent>
+        _auditoryEvents;
 
     public SensoryOrbContextGenerator(
-        IReadOnlyList<PerceivedSensoryOrb>
-            sensoryOrbs)
+        IReadOnlyList<TransparentAuditoryEvent>
+            auditoryEvents)
     {
-        _sensoryOrbs =
-            sensoryOrbs ??
+        _auditoryEvents =
+            auditoryEvents ??
             throw new ArgumentNullException(
-                nameof(sensoryOrbs));
+                nameof(auditoryEvents));
     }
 
     public int PrefixStabilityHint =>
@@ -29,7 +30,7 @@ public sealed class SensoryOrbContextGenerator
         ArgumentNullException.ThrowIfNull(
             writer);
 
-        if (_sensoryOrbs.Count == 0)
+        if (_auditoryEvents.Count == 0)
         {
             return ValueTask.CompletedTask;
         }
@@ -37,30 +38,27 @@ public sealed class SensoryOrbContextGenerator
         writer.WriteLine(
             "<current_sensory_experience>");
 
-        foreach (var orb in _sensoryOrbs)
+        foreach (var auditoryEvent in
+                 _auditoryEvents)
         {
             cancellationToken
                 .ThrowIfCancellationRequested();
 
             writer.WriteLine(
-                "  <sensory_event>");
-
-            writer.WriteLine(
-                $"    <modality>{orb.Modality}</modality>");
-
-            writer.WriteLine(
-                $"    <intensity>{orb.Intensity:F2}</intensity>");
-
-            writer.WriteLine(
-                $"    <distance_meters>{orb.Distance:F2}</distance_meters>");
+                $"  <auditory_event " +
+                $"ref=\"{Escape(auditoryEvent.Reference)}\" " +
+                $"direction_x=\"{auditoryEvent.Direction.Direction.X:F2}\" " +
+                $"direction_y=\"{auditoryEvent.Direction.Direction.Y:F2}\" " +
+                $"direction_z=\"{auditoryEvent.Direction.Direction.Z:F2}\" " +
+                $"volume=\"{auditoryEvent.Volume:F2}\">");
 
             writer.WriteLine(
                 "    <content>");
 
-            writer.WriteRaw(
-                orb.Content);
+            writer.WriteEscaped(
+                auditoryEvent.Content);
 
-            if (!orb.Content.EndsWith(
+            if (!auditoryEvent.Content.EndsWith(
                     Environment.NewLine,
                     StringComparison.Ordinal))
             {
@@ -71,7 +69,7 @@ public sealed class SensoryOrbContextGenerator
                 "    </content>");
 
             writer.WriteLine(
-                "  </sensory_event>");
+                "  </auditory_event>");
         }
 
         writer.WriteLine(
@@ -80,5 +78,13 @@ public sealed class SensoryOrbContextGenerator
         writer.WriteLine();
 
         return ValueTask.CompletedTask;
+    }
+
+    private static string Escape(
+        string value)
+    {
+        return System.Security.SecurityElement
+            .Escape(value)
+            ?? string.Empty;
     }
 }

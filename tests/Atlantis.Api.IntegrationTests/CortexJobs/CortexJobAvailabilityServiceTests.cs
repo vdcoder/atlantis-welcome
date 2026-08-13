@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Atlantis.Api.IntegrationTests.CortexJobs;
 
-public sealed class CortexJobAvailabilityServiceTests
+public sealed class SensoryOrbsTests
     : IsolatedDatabaseTest
 {
     private static readonly Guid

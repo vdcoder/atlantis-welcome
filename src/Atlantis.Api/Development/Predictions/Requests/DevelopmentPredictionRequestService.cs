@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
-using Atlantis.Api.Data;
 using Atlantis.Api.Development.Predictions.Domain;
-using Atlantis.Api.Development.Predictions.Persistence;
+using Atlantis.Api.Persistence;
+using Atlantis.Api.Persistence.Records;
 using Microsoft.EntityFrameworkCore;
 
 namespace Atlantis.Api.Development.Predictions.Requests;
@@ -75,7 +75,7 @@ public sealed class DevelopmentPredictionRequestService
         _dbContext
             .DevelopmentPredictionRequests
             .Add(
-                new DevelopmentPredictionRequestEntity
+                new DevelopmentPredictionRequestRecord
                 {
                     Id =
                         Guid.NewGuid(),

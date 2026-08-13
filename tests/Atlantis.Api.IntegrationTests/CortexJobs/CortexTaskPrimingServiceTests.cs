@@ -3,10 +3,10 @@ using Atlantis.Api.Citizens.Brain.CortexJobs.Domain;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Onboarding;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Qualifications;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Tasks;
-using Atlantis.Api.Data;
 using Atlantis.Api.Economy.Accounts;
 using Atlantis.Api.IntegrationTests.Infrastructure;
-using Atlantis.Api.Persistence.Entities;
+using Atlantis.Api.Persistence;
+using Atlantis.Api.Persistence.Records;
 using Microsoft.EntityFrameworkCore;
 
 namespace Atlantis.Api.IntegrationTests.CortexJobs;
@@ -282,7 +282,7 @@ public sealed class CortexTaskPrimingServiceTests
             (int)CortexTaskStatus.Assigned;
 
         dbContext.CortexTaskAssignments.Add(
-            new CortexTaskAssignmentEntity
+            new CortexTaskAssignmentRecord
             {
                 Id = existingAssignmentId,
 
@@ -424,7 +424,7 @@ public sealed class CortexTaskPrimingServiceTests
             DateTimeOffset now)
     {
         var definition =
-            new CortexJobDefinitionEntity
+            new CortexJobDefinitionRecord
             {
                 Id = SecondDefinitionId,
 
@@ -451,7 +451,7 @@ public sealed class CortexTaskPrimingServiceTests
             };
 
         var application =
-            new CortexJobApplicationEntity
+            new CortexJobApplicationRecord
             {
                 Id = SecondApplicationId,
                 CortexJobDefinitionId = SecondDefinitionId,
@@ -468,7 +468,7 @@ public sealed class CortexTaskPrimingServiceTests
             };
 
         var qualification =
-            new WorkerCortexJobQualificationEntity
+            new WorkerCortexJobQualificationRecord
             {
                 Id = SecondQualificationId,
                 CortexJobDefinitionId = SecondDefinitionId,
@@ -485,7 +485,7 @@ public sealed class CortexTaskPrimingServiceTests
             };
 
         var availability =
-            new WorkerCortexJobAvailabilityEntity
+            new WorkerCortexJobAvailabilityRecord
             {
                 WorkerCortexJobQualificationId =
                     SecondQualificationId,
@@ -495,7 +495,7 @@ public sealed class CortexTaskPrimingServiceTests
             };
 
         var task =
-            new CortexTaskEntity
+            new CortexTaskRecord
             {
                 Id = SecondTaskId,
                 CortexJobDefinitionId = SecondDefinitionId,
@@ -601,6 +601,6 @@ public sealed class CortexTaskPrimingServiceTests
                     entity.AvailableAt)
                 .SingleAsync();
 
-        return availableAt.Value.AddMinutes(1);
+        return availableAt!.Value.AddMinutes(1);
     }
 }

@@ -1,8 +1,7 @@
-﻿using Atlantis.Api.Data;
-using Atlantis.Api.Economy.Accounts;
+﻿using Atlantis.Api.Economy.Accounts;
 using Atlantis.Api.Economy.Ledger;
 using Atlantis.Api.IntegrationTests.Infrastructure;
-using Atlantis.Api.Persistence;
+using Atlantis.Api.Persistence.Seed;
 using Microsoft.EntityFrameworkCore;
 
 namespace Atlantis.Api.IntegrationTests.Economy;

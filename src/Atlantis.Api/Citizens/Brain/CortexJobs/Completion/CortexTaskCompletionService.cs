@@ -9,8 +9,8 @@ using Atlantis.Api.Citizens.Brain.CortexJobs
     .Simulation;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Simulation.WorkOrders;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Tasks;
-using Atlantis.Api.Data;
-using Atlantis.Api.Persistence.Entities;
+using Atlantis.Api.Persistence;
+using Atlantis.Api.Persistence.Records;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 
@@ -24,13 +24,13 @@ public sealed class CortexTaskCompletionService
     private readonly SimulateCitizenPassResultValidator
         _simulationValidator;
 
-    private readonly CortexTaskFeedbackOrbService
-        _feedbackOrbService;
+    private readonly CortexTaskFeedbackService
+        _feedbackService;
 
     public CortexTaskCompletionService(
         AtlantisDbContext dbContext,
         SimulateCitizenPassResultValidator simulationValidator,
-        CortexTaskFeedbackOrbService feedbackOrbService)
+        CortexTaskFeedbackService feedbackService)
     {
         _dbContext =
             dbContext ??
@@ -42,10 +42,10 @@ public sealed class CortexTaskCompletionService
             throw new ArgumentNullException(
                 nameof(simulationValidator));
 
-        _feedbackOrbService =
-            feedbackOrbService ??
+        _feedbackService =
+            feedbackService ??
             throw new ArgumentNullException(
-                nameof(feedbackOrbService));
+                nameof(feedbackService));
     }
 
     public async Task<CompleteCortexTaskResult>
@@ -174,8 +174,8 @@ public sealed class CortexTaskCompletionService
                 await transaction.CommitAsync(
                     cancellationToken);
 
-                _feedbackOrbService
-                    .CreateInvalidCompletionFormatOrb(
+                await _feedbackService
+                    .CreateInvalidCompletionFormatSayAsync(
                         request.WorkerCitizenId,
                         validation.Message ??
                             "The result was invalid.",
@@ -196,7 +196,7 @@ public sealed class CortexTaskCompletionService
                 Guid.NewGuid();
 
             var result =
-                new CortexTaskResultEntity
+                new CortexTaskResultRecord
                 {
                     Id = resultId,
 
@@ -215,7 +215,7 @@ public sealed class CortexTaskCompletionService
                 };
 
             var inboxMessage =
-                new CortexJobInboxMessageEntity
+                new CortexJobInboxMessageRecord
                 {
                     Id =
                         Guid.NewGuid(),
@@ -245,7 +245,7 @@ public sealed class CortexTaskCompletionService
                 };
 
             var remuneration =
-                new CortexTaskRemunerationEntity
+                new CortexTaskRemunerationRecord
                 {
                     Id =
                         Guid.NewGuid(),

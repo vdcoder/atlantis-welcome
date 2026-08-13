@@ -1,4 +1,4 @@
-using Atlantis.Api.Models;
+using Atlantis.Api.Common;
 
 namespace Atlantis.Api.World.Actions
 {

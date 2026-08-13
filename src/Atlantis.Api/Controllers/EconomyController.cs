@@ -1,6 +1,6 @@
-﻿using Atlantis.Api.Data;
-using Atlantis.Api.Economy.Contracts;
+﻿using Atlantis.Api.Economy.Contracts;
 using Atlantis.Api.Economy.Ledger;
+using Atlantis.Api.Persistence;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 

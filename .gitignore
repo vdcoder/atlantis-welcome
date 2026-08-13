@@ -14,3 +14,4 @@ appsettings.*.json
 .database-snapshots/
 run-true-world-integration.ps1
 run-test.ps1
+run-clever-coder.py

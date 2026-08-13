@@ -1,5 +1,4 @@
-using Atlantis.Api.Models;
-using Atlantis.Api.World;
+using Atlantis.Api.Common;
 using Atlantis.Api.World.Actions;
 using Atlantis.Api.World.Transitions;
 

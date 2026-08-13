@@ -1,19 +1,19 @@
 ﻿using System.Text.Json;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Domain;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Domain.ScheduleConditions;
-using Atlantis.Api.Persistence.Entities;
+using Atlantis.Api.Persistence.Records;
 
 namespace Atlantis.Api.Persistence.Mappers;
 
 public static class CortexJobDefinitionMapper
 {
-    public static CortexJobDefinitionEntity ToEntity(
+    public static CortexJobDefinitionRecord ToEntity(
         CortexJobDefinition definition)
     {
         ArgumentNullException.ThrowIfNull(
             definition);
 
-        var entity = new CortexJobDefinitionEntity
+        var entity = new CortexJobDefinitionRecord
         {
             Id = definition.Id,
             EmployerAccountId =
@@ -45,7 +45,7 @@ public static class CortexJobDefinitionMapper
     }
 
     public static CortexJobDefinition ToDomain(
-        CortexJobDefinitionEntity entity)
+        CortexJobDefinitionRecord entity)
     {
         ArgumentNullException.ThrowIfNull(
             entity);
@@ -79,7 +79,7 @@ public static class CortexJobDefinitionMapper
         };
     }
 
-    private static CortexJobScheduleConditionEntity
+    private static CortexJobScheduleConditionRecord
         ToConditionEntity(
             Guid cortexJobDefinitionId,
             CortexJobScheduleCondition condition,
@@ -93,7 +93,7 @@ public static class CortexJobDefinitionMapper
                 condition,
                 condition.GetType());
 
-        return new CortexJobScheduleConditionEntity
+        return new CortexJobScheduleConditionRecord
         {
             Id = Guid.NewGuid(),
             CortexJobDefinitionId = cortexJobDefinitionId,
@@ -105,7 +105,7 @@ public static class CortexJobDefinitionMapper
 
     private static CortexJobScheduleCondition
         ToConditionDomain(
-            CortexJobScheduleConditionEntity entity)
+            CortexJobScheduleConditionRecord entity)
     {
         return entity.ConditionType switch
         {
@@ -150,7 +150,7 @@ public static class CortexJobDefinitionMapper
     }
 
     private static T Deserialize<T>(
-        CortexJobScheduleConditionEntity entity)
+        CortexJobScheduleConditionRecord entity)
         where T : CortexJobScheduleCondition
     {
         return JsonSerializer.Deserialize<T>(
