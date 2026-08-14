@@ -1,3 +1,4 @@
+using Atlantis.Api.Citizens.Perception;
 using Atlantis.Api.Common;
 using Atlantis.Api.World;
 using Atlantis.Api.World.Actions;
@@ -14,12 +15,17 @@ namespace Atlantis.Api.Controllers
         private readonly WorldActionProcessor
             _worldActionProcessor;
 
+        private readonly SensoryOrbPerception
+            _sensoryOrbPerception;
+
         public WorldController(
             WorldRuntime worldRuntime,
-            WorldActionProcessor worldActionProcessor)
+            WorldActionProcessor worldActionProcessor,
+            SensoryOrbPerception sensoryOrbPerception)
         {
             _worldRuntime = worldRuntime;
             _worldActionProcessor = worldActionProcessor;
+            _sensoryOrbPerception = sensoryOrbPerception;
         }
 
         [HttpGet(Name = "GetWorld")]
@@ -116,6 +122,84 @@ namespace Atlantis.Api.Controllers
                 return NotFound();
             }
         }
+
+        [HttpGet("entities/{entityId}/auditory-orbs")]
+        public ActionResult<
+            IReadOnlyList<AuditoryOrbDto>>
+            GetAuditoryOrbs(
+                string entityId)
+        {
+            var snapshot =
+                _worldRuntime.GetSnapshot();
+
+            var observer =
+                snapshot.World.Entities
+                    .FirstOrDefault(
+                        entity =>
+                            entity.Id == entityId);
+
+            if (observer is null)
+            {
+                return NotFound();
+            }
+
+            var observedAt =
+                DateTimeOffset.UtcNow;
+
+            var perceived =
+                _sensoryOrbPerception.Perceive(
+                    observer,
+                    snapshot.World,
+                    observedAt);
+
+            var result =
+                perceived
+                    .Select(
+                        binding =>
+                            new AuditoryOrbDto(
+                                OrbId:
+                                    binding.OrbId,
+
+                                Reference:
+                                    binding
+                                        .TransparentAuditoryEvent
+                                        .Reference,
+
+                                DirectionX:
+                                    binding
+                                        .TransparentAuditoryEvent
+                                        .Direction
+                                        .Direction
+                                        .X,
+
+                                DirectionY:
+                                    binding
+                                        .TransparentAuditoryEvent
+                                        .Direction
+                                        .Direction
+                                        .Y,
+
+                                DirectionZ:
+                                    binding
+                                        .TransparentAuditoryEvent
+                                        .Direction
+                                        .Direction
+                                        .Z,
+
+                                Volume:
+                                    binding
+                                        .TransparentAuditoryEvent
+                                        .Volume,
+
+                                Content:
+                                    binding
+                                        .TransparentAuditoryEvent
+                                        .Content))
+                    .ToList();
+
+            return Ok(
+                result);
+        }
     }
 
     public sealed class MoveEntityRequestDto
@@ -164,4 +248,13 @@ namespace Atlantis.Api.Controllers
         } =
             new();
     }
+
+    public sealed record AuditoryOrbDto(
+        Guid OrbId,
+        string Reference,
+        float DirectionX,
+        float DirectionY,
+        float DirectionZ,
+        float Volume,
+        string Content);
 }

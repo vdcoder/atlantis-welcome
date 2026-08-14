@@ -38,6 +38,10 @@ public sealed class SensoryOrbContextGenerator
         writer.WriteLine(
             "<current_sensory_experience>");
 
+        if (_auditoryEvents.Count > 1) {
+            int i = 5;
+        }
+
         foreach (var auditoryEvent in
                  _auditoryEvents)
         {

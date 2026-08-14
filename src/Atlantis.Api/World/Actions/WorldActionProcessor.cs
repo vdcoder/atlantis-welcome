@@ -113,7 +113,7 @@ namespace Atlantis.Api.World.Actions
                         now,
 
                     expiresAt:
-                        now.AddSeconds(5),
+                        now.AddSeconds(60),
 
                     sourceEntityId:
                         request.ActorId,

@@ -20,6 +20,13 @@ public sealed record PerceivedAuditoryEventBinding(
 
 public sealed class SensoryOrbPerception
 {
+    private static readonly Position
+        HearingOffset =
+            new(
+                0f,
+                1.6f,
+                0f);
+
     private readonly OrbPositionResolver
         _positionResolver;
 
@@ -119,9 +126,20 @@ public sealed class SensoryOrbPerception
                             : BuildVoiceReference(
                                 source);
 
+                    var hearingPosition =
+                        new Position(
+                            observer.Position.X +
+                                HearingOffset.X,
+
+                            observer.Position.Y +
+                                HearingOffset.Y,
+
+                            observer.Position.Z +
+                                HearingOffset.Z);
+
                     var direction =
                         DirectionTo(
-                            observer.Position,
+                            hearingPosition,
                             item.WorldPosition);
 
                     var volume =
@@ -184,11 +202,19 @@ public sealed class SensoryOrbPerception
         Position observer,
         Position source)
     {
-        return new Direction(
-            source.X - observer.X,
-            source.Y - observer.Y,
-            source.Z - observer.Z)
-            .Normalize();
+        var direction =
+            new Direction(
+                source.X - observer.X,
+                source.Y - observer.Y,
+                source.Z - observer.Z);
+
+        if (direction.LengthSquared <=
+            0.000001f)
+        {
+            return Direction.UnitZ;
+        }
+
+        return direction.Normalize();
     }
 
     private static float PerceivedVolume(
