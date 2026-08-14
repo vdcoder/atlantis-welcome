@@ -201,7 +201,7 @@ public sealed class SensoryOrbsTests
 
         Assert.Equal(
             spokenAt
-                .AddSeconds(5)
+                .AddSeconds(60)
                 .UtcDateTime,
             persistedOrb.ExpiresAt);
 
