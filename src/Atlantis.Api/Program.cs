@@ -14,24 +14,25 @@ using Atlantis.Api.Citizens.Interaction;
 using Atlantis.Api.Citizens.Perception;
 using Atlantis.Api.Citizens.Runtime;
 using Atlantis.Api.Citizens.Sponsorship;
-using Atlantis.Api.Data;
-using Atlantis.Api.Data.Entities;
+using Atlantis.Api.World.Entities;
 using Atlantis.Api.Development.Predictions;
-using Atlantis.Api.Development.Predictions.Persistence;
 using Atlantis.Api.Development.Predictions.Remote;
 using Atlantis.Api.Development.Predictions.Requests;
 using Atlantis.Api.Development.Predictions.Serialization;
 using Atlantis.Api.Economy.Ledger;
-using Atlantis.Api.Models;
 using Atlantis.Api.Persistence;
+using Atlantis.Api.Persistence.Records;
 using Atlantis.Api.World;
 using Atlantis.Api.World.Actions;
 using Atlantis.Api.World.Authorization;
 using Atlantis.Api.World.EmbodiedControl;
 using Atlantis.Api.World.Orbs;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Npgsql;
+using Atlantis.Api.Persistence.Seed;
+using Atlantis.Api.World.Spatial;
+using Atlantis.Api.Common;
+using Atlantis.Api.Persistence.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,12 +86,12 @@ builder.Services.AddSingleton(
 builder.Services.AddSingleton<WorldPersistenceService>();
 builder.Services.AddSingleton<WorldTransitionProcessor>();
 builder.Services.AddSingleton<WorldActionProcessor>();
+builder.Services.AddSingleton<WorldStateLoader>();
 builder.Services.AddSingleton<WorldRuntime>();
 
-builder.Services.AddSingleton<WorldOrbCollection>();
-builder.Services.AddSingleton<WorldOrbPositionResolver>();
+builder.Services.AddSingleton<OrbPositionResolver>();
 builder.Services.AddSingleton<SensoryOrbPerception>();
-builder.Services.AddSingleton<CortexTaskFeedbackOrbService>();
+builder.Services.AddSingleton<CortexTaskFeedbackService>();
 
 // Register citizen agent infrastructure as singletons
 builder.Services.AddSingleton<MoveTo>();
@@ -101,6 +102,7 @@ builder.Services.AddSingleton<SetGaze>();
 builder.Services.AddSingleton<FaceAndLook>();
 
 builder.Services.AddScoped<CitizenRuntime>();
+builder.Services.AddScoped<EmbodiedPredictionExecutor>();
 
 builder.Services.AddSingleton<Predictor>();
 builder.Services.AddSingleton<NearbyEntityPerception>();
@@ -178,6 +180,10 @@ builder.Services.AddSingleton<
 builder.Services.AddScoped<
     DevelopmentPredictionRequestService>();
 
+builder.Services.AddSingleton<
+    ISensoryPathResolver,
+    AlwaysClearSensoryPathResolver>();
+
 builder.Services
     .AddHttpClient<
         TrueWorldPredictionClient>(
@@ -213,18 +219,18 @@ var citizenControllerRegistry =
     app.Services.GetRequiredService<
         CitizenControllerRegistry>();
 
-if (productionVerifier.IsProduction)
+//if (productionVerifier.IsProduction)
 {
     citizenControllerRegistry.Register<
         CitizenEmbodiedController>(
             "orestes");
 }
-else
-{
-    citizenControllerRegistry.Register<
-        RecordedDevelopmentCitizenController>(
-            "orestes");
-}
+//else
+//{
+//    citizenControllerRegistry.Register<
+//        RecordedDevelopmentCitizenController>(
+//            "orestes");
+//}
 
 // Initialize world state after build
 using (var scope = app.Services.CreateScope())
@@ -236,12 +242,22 @@ using (var scope = app.Services.CreateScope())
 
     await dbContext.Database.MigrateAsync();
 
+    await VisualAttributeSeed.EnsureSeededAsync(
+        dbContext);
+
+    await VoiceAttributeSeed.EnsureSeededAsync(
+        dbContext);
+
     var registeredWorldState =
         scope.ServiceProvider
             .GetRequiredService<
                 WorldState>();
 
-    await InitializeWorldStateAsync(
+    var worldStateLoader =
+        scope.ServiceProvider
+            .GetRequiredService<WorldStateLoader>();
+
+    await worldStateLoader.InitializeAsync(
         dbContext,
         registeredWorldState);
 
@@ -288,246 +304,6 @@ app.MapControllers();
 
 await app.RunAsync();
 
-static async Task InitializeWorldStateAsync(
-    AtlantisDbContext dbContext,
-    WorldState worldState)
-{
-    var persistedWorld = await dbContext.Worlds
-        .Include(world => world.Entities)
-        .FirstOrDefaultAsync(
-            world => world.WorldId == "atlantis-welcome");
-
-    if (persistedWorld != null)
-    {
-        var world = new Atlantis.Api.Models.World
-        {
-            WorldId = persistedWorld.WorldId,
-            Time = persistedWorld.Time,
-            Places =
-            [
-                new Place
-                {
-                    Id = "welcome-center",
-                    Name = "Atlantis Welcome Center"
-                },
-                new Place
-                {
-                    Id = "external",
-                    Name = "Outside Atlantis"
-                }
-            ],
-            Entities = persistedWorld.Entities
-                .Select(entity => new Entity
-                {
-                    Id = entity.EntityId,
-                    Type = entity.Type,
-                    Name = entity.Name,
-                    PlaceId = entity.PlaceId,
-
-                    Position = new Position(
-                        entity.PositionX,
-                        entity.PositionY,
-                        entity.PositionZ),
-
-                    Embodiment = MapEmbodiment(entity),
-
-                    CurrentUtterance =
-                        entity.UtteranceText != null &&
-                        entity.UtteranceSequence.HasValue &&
-                        entity.UtteranceSpokenAt.HasValue
-                            ? new Utterance
-                            {
-                                Sequence =
-                                    entity.UtteranceSequence.Value,
-
-                                Text =
-                                    entity.UtteranceText,
-
-                                SpokenAt =
-                                    new DateTimeOffset(
-                                        entity.UtteranceSpokenAt.Value,
-                                        TimeSpan.Zero)
-                            }
-                            : null,
-
-                    CurrentPrivateMessage =
-                        entity.PrivateMessageText != null &&
-                        entity.PrivateMessageSequence.HasValue &&
-                        entity.PrivateMessageDeliveredAt.HasValue
-                            ? new PrivateMessage
-                            {
-                                Sequence =
-                                    entity.PrivateMessageSequence.Value,
-
-                                SenderId =
-                                    entity.PrivateMessageSenderId
-                                    ?? string.Empty,
-
-                                Text =
-                                    entity.PrivateMessageText,
-
-                                DeliveredAt =
-                                    new DateTimeOffset(
-                                        entity.PrivateMessageDeliveredAt.Value,
-                                        TimeSpan.Zero)
-                            }
-                            : null,
-                })
-                .ToList()
-        };
-
-        worldState.Initialize(world, persistedWorld.Revision);
-
-        return;
-    }
-
-    var initialWorld = new Atlantis.Api.Models.World
-    {
-        WorldId = "atlantis-welcome",
-        Time = DateTime.Parse(
-            "2026-07-15T17:30:00Z",
-            null,
-            System.Globalization.DateTimeStyles.AdjustToUniversal),
-        Places =
-        [
-            new Place
-            {
-                Id = "welcome-center",
-                Name = "Atlantis Welcome Center"
-            },
-            new Place
-            {
-                Id = "external",
-                Name = "Outside Atlantis"
-            }
-        ],
-        Entities =
-        [
-            new Entity
-            {
-                Id = "orestes",
-                Type = "citizen",
-                Name = "Orestes",
-                PlaceId = "welcome-center",
-                Position = new Position(0f, 0f, 0f),
-
-                Embodiment = new Embodiment
-                {
-                    TorsoFront = Direction.UnitZ,
-                    GazeDirection = Direction.UnitZ
-                }
-            },
-            new Entity
-            {
-                Id = "visitor-default",
-                Type = "visitor",
-                Name = "Visitor",
-                PlaceId = "welcome-center",
-                Position = new Position(0f, 0f, -1.5f),
-
-                Embodiment = new Embodiment
-                {
-                    TorsoFront = Direction.UnitZ,
-                    GazeDirection = Direction.UnitZ
-                }
-            },
-            new Entity
-            {
-                Id = "human:victor",
-                Type = "human",
-                Name = "Victor",
-                PlaceId = "external",
-                Position = new Position(
-                    0f,
-                    0f,
-                    0f),
-                Embodiment = null
-            }
-        ]
-    };
-
-    worldState.Initialize(initialWorld, 0);
-
-    var persisted = new Atlantis.Api.Data.Entities.WorldEntity
-    {
-        Id = Guid.NewGuid(),
-        WorldId = initialWorld.WorldId,
-        Time = initialWorld.Time,
-        Revision = 0,
-        Entities = initialWorld.Entities
-            .Select(entity =>
-                new Atlantis.Api.Data.Entities.EntityEntity
-                {
-                    Id = Guid.NewGuid(),
-                    EntityId = entity.Id,
-                    Type = entity.Type,
-                    Name = entity.Name,
-                    PlaceId = entity.PlaceId,
-                    PositionX = entity.Position.X,
-                    PositionY = entity.Position.Y,
-                    PositionZ = entity.Position.Z,
-                    TorsoFrontX = entity.Embodiment?.TorsoFront.X,
-                    TorsoFrontY = entity.Embodiment?.TorsoFront.Y,
-                    TorsoFrontZ = entity.Embodiment?.TorsoFront.Z,
-                    GazeDirectionX = entity.Embodiment?.GazeDirection.X,
-                    GazeDirectionY = entity.Embodiment?.GazeDirection.Y,
-                    GazeDirectionZ = entity.Embodiment?.GazeDirection.Z
-                })
-            .ToList()
-    };
-
-    dbContext.Worlds.Add(persisted);
-    await dbContext.SaveChangesAsync();
-}
-
-static Embodiment? MapEmbodiment(EntityEntity entity)
-{
-    var hasNoOrientation =
-        entity.TorsoFrontX is null &&
-        entity.TorsoFrontY is null &&
-        entity.TorsoFrontZ is null &&
-        entity.GazeDirectionX is null &&
-        entity.GazeDirectionY is null &&
-        entity.GazeDirectionZ is null;
-
-    if (hasNoOrientation)
-    {
-        return null;
-    }
-
-    var hasCompleteOrientation =
-        entity.TorsoFrontX is not null &&
-        entity.TorsoFrontY is not null &&
-        entity.TorsoFrontZ is not null &&
-        entity.GazeDirectionX is not null &&
-        entity.GazeDirectionY is not null &&
-        entity.GazeDirectionZ is not null;
-
-    if (!hasCompleteOrientation)
-    {
-        throw new InvalidOperationException(
-            $"Entity '{entity.EntityId}' contains partial " +
-            "embodiment orientation data.");
-    }
-
-    return new Embodiment
-    {
-        TorsoFront =
-            new Direction(
-                entity.TorsoFrontX!.Value,
-                entity.TorsoFrontY!.Value,
-                entity.TorsoFrontZ!.Value)
-            .Normalize(),
-
-        GazeDirection =
-            new Direction(
-                entity.GazeDirectionX!.Value,
-                entity.GazeDirectionY!.Value,
-                entity.GazeDirectionZ!.Value)
-            .Normalize()
-    };
-}
-
 static async Task EnsureKnownIdentityEntitiesAsync(
     AtlantisDbContext dbContext,
     WorldState worldState,
@@ -573,6 +349,9 @@ static async Task EnsureKnownIdentityEntitiesAsync(
                         victorId,
                 cancellationToken);
 
+    var positionChangedAt =
+        DateTimeOffset.UtcNow;
+
     var victor =
         new Entity
         {
@@ -594,6 +373,9 @@ static async Task EnsureKnownIdentityEntitiesAsync(
                     0f,
                     0f),
 
+            PositionChangedAt =
+                positionChangedAt,
+
             Embodiment =
                 null
         };
@@ -601,16 +383,13 @@ static async Task EnsureKnownIdentityEntitiesAsync(
     if (!persistedIdentityExists)
     {
         dbContext.Entities.Add(
-            new EntityEntity
+            new EntityRecord
             {
-                Id =
-                    Guid.NewGuid(),
+                EntityId =
+                    victor.Id,
 
                 WorldId =
                     persistedWorldId,
-
-                EntityId =
-                    victor.Id,
 
                 Type =
                     victor.Type,
@@ -628,7 +407,10 @@ static async Task EnsureKnownIdentityEntitiesAsync(
                     victor.Position.Y,
 
                 PositionZ =
-                    victor.Position.Z
+                    victor.Position.Z,
+
+                PositionChangedAt =
+                    victor.PositionChangedAt.UtcDateTime,
             });
 
         await dbContext.SaveChangesAsync(

@@ -3,10 +3,9 @@ using System.Text.Json;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Domain;
 using Atlantis.Api.Citizens.Brain.CortexJobs
     .Simulation.Contracts;
-using Atlantis.Api.Data;
 using Atlantis.Api.Development.Predictions.Remote;
 using Atlantis.Api.Persistence;
-using Atlantis.Api.Persistence.Entities;
+using Atlantis.Api.Persistence.Records;
 using Atlantis.Api.Persistence.Mappers;
 using Microsoft.EntityFrameworkCore;
 
@@ -207,7 +206,7 @@ public sealed class
                     creation.SimulationTask);
 
             var workOrderEntity =
-                new SimulateCitizenPassWorkOrderEntity
+                new SimulateCitizenPassWorkOrderRecord
                 {
                     Id =
                         workOrderId,
@@ -419,7 +418,7 @@ public sealed class
     }
 
     private static void EnsureEquivalentRequest(
-        SimulateCitizenPassWorkOrderEntity existing,
+        SimulateCitizenPassWorkOrderRecord existing,
         TrueWorldPredictionRequestDto request)
     {
         var equivalent =

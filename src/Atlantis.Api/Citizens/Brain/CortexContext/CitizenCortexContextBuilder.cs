@@ -6,7 +6,7 @@ using Atlantis.Api.Citizens.Brain.CortexContext.DynamicContext.Generators;
 using Atlantis.Api.Citizens.Brain.CortexContext.StaticContext.Generators;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Context;
 using Atlantis.Api.Citizens.Perception;
-using Atlantis.Api.Models;
+using Atlantis.Api.World.Entities;
 
 namespace Atlantis.Api.Citizens.Brain.CortexContext;
 
@@ -27,18 +27,18 @@ public sealed class CitizenCortexContextBuilder
 
     public async Task<CortexContext> BuildAsync(
         Entity citizen,
-        IReadOnlyList<PerceivedObject> nearbyObjects,
-        IReadOnlyList<PerceivedSensoryOrb> sensoryOrbs,
+        IReadOnlyList<TransparentEntity> nearbyEntities,
+        IReadOnlyList<TransparentAuditoryEvent> auditoryEvents,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(
             citizen);
 
         ArgumentNullException.ThrowIfNull(
-            nearbyObjects);
+            nearbyEntities);
 
         ArgumentNullException.ThrowIfNull(
-            sensoryOrbs);
+            auditoryEvents);
 
         if (citizen.Embodiment is null)
         {
@@ -58,11 +58,11 @@ public sealed class CitizenCortexContextBuilder
                 new CurrentPositionContextGenerator(
                     citizen.Position),
 
-                new NearbyObjectsContextGenerator(
-                    nearbyObjects),
+                new NearbyEntitiesContextGenerator(
+                    nearbyEntities),
 
                 new SensoryOrbContextGenerator(
-                    sensoryOrbs),
+                    auditoryEvents),
 
                 new PrimedCortexTaskContextGenerator(
                     citizen.Id,

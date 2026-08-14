@@ -3,7 +3,7 @@ using Atlantis.Api.Citizens.Brain.CortexJobs
     .Completion;
 using Atlantis.Api.Citizens.Brain.CortexJobs
     .Simulation.Contracts;
-using Atlantis.Api.Models;
+using Atlantis.Api.Common;
 
 namespace Atlantis.Api.Citizens.Brain.CortexJobs
     .Simulation;

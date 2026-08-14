@@ -1,9 +1,15 @@
+using Atlantis.Api.Persistence.Services;
+using Atlantis.Api.World.Orbs;
 using Atlantis.Api.World.Transitions;
 
 namespace Atlantis.Api.World;
 
 public sealed class WorldTransitionProcessor
 {
+    private static readonly TimeSpan
+        PositionObservationRetention =
+            TimeSpan.FromSeconds(3);
+
     private readonly WorldPersistenceService
         _persistenceService;
 
@@ -107,24 +113,6 @@ public sealed class WorldTransitionProcessor
                     state);
                 break;
 
-            case EntitySpokeTransition speech:
-                Apply(
-                    speech,
-                    state);
-                break;
-
-            case PrivateMessageDeliveredTransition message:
-                Apply(
-                    message,
-                    state);
-                break;
-
-            case UiInputReceivedTransition uiInput:
-                Apply(
-                    uiInput,
-                    state);
-                break;
-
             case EntityTorsoTurnedTransition torsoTurned:
                 Apply(
                     torsoTurned,
@@ -135,6 +123,19 @@ public sealed class WorldTransitionProcessor
                 Apply(
                     gazeChanged,
                     state);
+                break;
+
+            case SensoryOrbCreatedTransition orbCreated:
+                Apply(
+                    orbCreated,
+                    state);
+                break;
+
+            case EntityPositionReportedTransition positionReported:
+                Apply(
+                    positionReported,
+                    state);
+
                 break;
 
             default:
@@ -155,45 +156,8 @@ public sealed class WorldTransitionProcessor
                         entity.Id ==
                         transition.EntityId);
 
-        entity.Position =
-            transition.To;
-    }
-
-    private static void Apply(
-        EntitySpokeTransition transition,
-        WorldState state)
-    {
-        var entity =
-            state.World.Entities
-                .Single(
-                    entity =>
-                        entity.Id ==
-                        transition.EntityId);
-
-        entity.CurrentUtterance =
-            transition.Utterance;
-    }
-
-    private static void Apply(
-        PrivateMessageDeliveredTransition transition,
-        WorldState state)
-    {
-        var recipient =
-            state.World.Entities
-                .Single(
-                    entity =>
-                        entity.Id ==
-                        transition.RecipientId);
-
-        recipient.CurrentPrivateMessage =
-            transition.Message;
-    }
-
-    private static void Apply(
-        UiInputReceivedTransition transition,
-        WorldState state)
-    {
-        // No authoritative world-state change yet.
+        entity.Position = transition.To;
+        entity.PositionChangedAt = transition.ChangedAt;
     }
 
     private static void Apply(
@@ -236,5 +200,69 @@ public sealed class WorldTransitionProcessor
 
         entity.Embodiment.GazeDirection =
             transition.GazeDirection;
+    }
+
+    private static void Apply(
+        SensoryOrbCreatedTransition transition,
+        WorldState state)
+    {
+        state.World.Orbs.Add(
+            transition.Orb);
+    }
+
+    private static void Apply(
+        EntityPositionReportedTransition reported,
+        WorldState state)
+    {
+        var entity =
+        state.World.Entities
+            .SingleOrDefault(
+                value =>
+                    value.Id == reported.EntityId)
+        ?? throw new EntityNotFoundException(
+            reported.EntityId);
+
+        if (entity.Position.Equals(reported.ReportedPosition))
+        {
+            return;
+        }
+
+        var positionFirstRecordedAt =
+            entity.PositionChangedAt <= reported.ObservedAt
+                ? entity.PositionChangedAt
+                : reported.ObservedAt;
+
+        var historicalOrb =
+            new PositionObservationOrb(
+                id:
+                    Guid.NewGuid(),
+
+                createdAt:
+                    reported.ObservedAt,
+
+                expiresAt:
+                    reported.ObservedAt +
+                    PositionObservationRetention,
+
+                sourceEntityId:
+                    reported.SourceEntityId,
+
+                observedEntityId:
+                    entity.Id,
+
+                observedPosition:
+                    entity.Position,
+
+                positionFirstRecordedAt:
+                    positionFirstRecordedAt);
+
+        state.World.Orbs.Add(
+            historicalOrb);
+
+        entity.Position =
+            reported.ReportedPosition;
+
+        entity.PositionChangedAt =
+            reported.ObservedAt;
     }
 }

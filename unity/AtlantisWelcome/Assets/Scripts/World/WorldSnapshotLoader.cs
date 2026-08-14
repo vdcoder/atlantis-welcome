@@ -10,6 +10,9 @@ namespace AtlantisWelcome.World
     public sealed class WorldSnapshotLoader : MonoBehaviour
     {
         [SerializeField]
+        private string locallyControlledEntityId = "visitor-default";
+
+        [SerializeField]
         private AtlantisApiClient apiClient;
 
         [SerializeField]
@@ -115,7 +118,13 @@ namespace AtlantisWelcome.World
                     entityView);
             }
 
-            entityView.Apply(entity);
+            var applyPosition =
+                !_hasAppliedInitialSnapshot ||
+                entity.id != locallyControlledEntityId;
+
+            entityView.Apply(
+                entity,
+                applyPosition);
         }
 
         private void ApplyCommunications(

@@ -1,4 +1,6 @@
-using Atlantis.Api.Models;
+using Atlantis.Api.Common;
+using Atlantis.Api.World.Entities;
+using Atlantis.Api.World.Orbs;
 using Atlantis.Api.World.Transitions;
 
 namespace Atlantis.Api.World.Actions
@@ -41,6 +43,9 @@ namespace Atlantis.Api.World.Actions
                 TouchRequest touchRequest =>
                     ProcessAsync(touchRequest),
 
+                ReportPositionObservationRequest positionObservationRequest =>
+                    ProcessAsync(positionObservationRequest),
+
                 _ => throw new NotSupportedException(
                     $"Unsupported world action request type: " +
                     $"{request.GetType().Name}.")
@@ -53,10 +58,12 @@ namespace Atlantis.Api.World.Actions
                 .SingleOrDefault(entity => entity.Id == request.EntityId)
                 ?? throw new EntityNotFoundException(request.EntityId);
 
-            var transition = new EntityMovedTransition(
-                entity.Id,
-                entity.Position,
-                request.Destination);
+            var transition =
+                new EntityMovedTransition(
+                    entity.Id,
+                    entity.Position,
+                    request.Destination,
+                    DateTimeOffset.UtcNow);
 
             await _transitionProcessor.ApplyAsync(
                 transition,
@@ -66,45 +73,87 @@ namespace Atlantis.Api.World.Actions
         }
 
         private async Task<IReadOnlyList<WorldTransition>> ProcessAsync(
-    SayRequest request)
+            SayRequest request)
         {
-            // Verify actor exists
-            _ = _state.World.Entities
-                .SingleOrDefault(entity =>
-                    entity.Id == request.ActorId)
-                ?? throw new EntityNotFoundException(
-                    request.ActorId);
+            if (request.ActorId is not null)
+            {
+                _ = _state.World.Entities
+                    .SingleOrDefault(
+                        entity =>
+                            entity.Id == request.ActorId)
+                    ?? throw new EntityNotFoundException(
+                        request.ActorId);
+            }
 
-            // Verify entity exists
-            var entity = _state.World.Entities
-                .SingleOrDefault(entity =>
-                    entity.Id == request.EntityId)
+            _ = _state.World.Entities
+                .SingleOrDefault(
+                    entity =>
+                        entity.Id == request.EntityId)
                 ?? throw new EntityNotFoundException(
                     request.EntityId);
 
-            if (string.IsNullOrWhiteSpace(request.Text))
+            if (string.IsNullOrWhiteSpace(
+                    request.Text))
             {
                 throw new ArgumentException(
-                    "Utterance text cannot be empty.",
+                    "Say text cannot be empty.",
                     nameof(request.Text));
             }
 
-            var utterance = new Utterance
-            {
-                Sequence = _state.Revision + 1,
-                Text = request.Text,
-                SpokenAt = DateTimeOffset.UtcNow
-            };
+            var now =
+                request.SpokenAt ??
+                DateTimeOffset.UtcNow;
 
-            var transition = new EntitySpokeTransition(
-                entity.Id,
-                utterance);
+            var sensoryOrb =
+                new SensoryOrb(
+                    id:
+                        Guid.NewGuid(),
+
+                    createdAt:
+                        now,
+
+                    expiresAt:
+                        now.AddSeconds(60),
+
+                    sourceEntityId:
+                        request.ActorId,
+
+                    attachmentEntityId:
+                        request.EntityId,
+
+                    attachmentPosition:
+                        new Position(
+                            0f,
+                            1.6f,
+                            0.15f),
+
+                    radius:
+                        10f,
+
+                    modality:
+                        SensoryModality.Auditory,
+
+                    content:
+                        request.Text,
+
+                    intensity:
+                        0.5f);
+
+            var orbTransition =
+                new SensoryOrbCreatedTransition(
+                    sensoryOrb);
+
+            var transitions =
+                new WorldTransition[]
+                {
+                    orbTransition
+                };
 
             await _transitionProcessor.ApplyAsync(
-                transition,
+                transitions,
                 _state);
 
-            return [transition];
+            return transitions;
         }
 
         private const float MaximumTouchDistance = 2f;
@@ -117,7 +166,7 @@ namespace Atlantis.Api.World.Actions
                 .SingleOrDefault(entity =>
                     entity.Id == request.ActorId)
                 ?? throw new EntityNotFoundException(
-                    request.ActorId);
+                    request.ActorId ?? "");
 
             var target = _state.World.Entities
                 .SingleOrDefault(entity =>
@@ -158,35 +207,55 @@ namespace Atlantis.Api.World.Actions
                 return [];
             }
 
-            if (target.Type is "citizen" or "visitor")
+            if (target.Type is
+                "citizen" or
+                "visitor" or
+                "ui")
             {
-                var message = new PrivateMessage
-                {
-                    Sequence = _state.Revision + 1,
-                    SenderId = actor.Id,
-                    Text = request.Text,
-                    DeliveredAt = DateTimeOffset.UtcNow
-                };
+                var now =
+                    DateTimeOffset.UtcNow;
+
+                var orb =
+                    new SensoryOrb(
+                        id:
+                            Guid.NewGuid(),
+
+                        createdAt:
+                            now,
+
+                        expiresAt:
+                            now.AddSeconds(1),
+
+                        sourceEntityId:
+                            actor.Id,
+
+                        attachmentEntityId:
+                            null,
+
+                        attachmentPosition:
+                            target.Position,
+
+                        radius:
+                            MaximumTouchDistance,
+
+                        modality:
+                            SensoryModality.Tactile,
+
+                        content:
+                            request.Text,
+
+                        intensity:
+                            0.5f,
+
+                        targetEntityIds:
+                            new HashSet<string>
+                            {
+                                target.Id
+                            });
 
                 var transition =
-                    new PrivateMessageDeliveredTransition(
-                        target.Id,
-                        message);
-
-                await _transitionProcessor.ApplyAsync(
-                    transition,
-                    _state);
-
-                return [transition];
-            }
-
-            if (target.Type == "ui")
-            {
-                var transition =
-                    new UiInputReceivedTransition(
-                        target.Id,
-                        actor.Id,
-                        request.Text);
+                    new SensoryOrbCreatedTransition(
+                        orb);
 
                 await _transitionProcessor.ApplyAsync(
                     transition,
@@ -211,7 +280,7 @@ namespace Atlantis.Api.World.Actions
         {
             var entity =
                 GetAuthorizedEmbodiedTarget(
-                    request.ActorId,
+                    request.ActorId ?? "",
                     request.TargetEntityId);
 
             var torsoFront =
@@ -235,7 +304,7 @@ namespace Atlantis.Api.World.Actions
         {
             var entity =
                 GetAuthorizedEmbodiedTarget(
-                    request.ActorId,
+                    request.ActorId ?? "",
                     request.TargetEntityId);
 
             var gazeDirection =
@@ -258,7 +327,7 @@ namespace Atlantis.Api.World.Actions
         {
             var entity =
                 GetAuthorizedEmbodiedTarget(
-                    request.ActorId,
+                    request.ActorId ?? "",
                     request.TargetEntityId);
 
             var torsoFront =
@@ -285,6 +354,87 @@ namespace Atlantis.Api.World.Actions
                 _state);
 
             return transitions;
+        }
+
+        private const float
+            PositionChangeToleranceMeters =
+                0.001f;
+
+        private static bool HasPositionChanged(
+            Position current,
+            Position reported)
+        {
+            var dx =
+                current.X - reported.X;
+
+            var dy =
+                current.Y - reported.Y;
+
+            var dz =
+                current.Z - reported.Z;
+
+            var distanceSquared =
+                dx * dx +
+                dy * dy +
+                dz * dz;
+
+            return distanceSquared >
+                PositionChangeToleranceMeters *
+                PositionChangeToleranceMeters;
+        }
+
+        private async Task<IReadOnlyList<WorldTransition>> ProcessAsync(
+            ReportPositionObservationRequest request)
+        {
+            var actor =
+                _state.World.Entities
+                    .SingleOrDefault(
+                        entity =>
+                            entity.Id == request.ActorId)
+                ?? throw new EntityNotFoundException(
+                    request.ActorId ?? "");
+
+            var observedEntity =
+                _state.World.Entities
+                    .SingleOrDefault(
+                        entity =>
+                            entity.Id == request.ObservedEntityId)
+                ?? throw new EntityNotFoundException(
+                    request.ObservedEntityId);
+
+            if (actor.Id != observedEntity.Id)
+            {
+                throw new InvalidOperationException(
+                    "An entity may currently report only " +
+                    "its own position.");
+            }
+
+            if (!HasPositionChanged(
+                observedEntity.Position,
+                request.Position))
+            {
+                return [];
+            }
+
+            var transition =
+                new EntityPositionReportedTransition(
+                    EntityId:
+                        observedEntity.Id,
+
+                    SourceEntityId:
+                        actor.Id,
+
+                    ReportedPosition:
+                        request.Position,
+
+                    ObservedAt:
+                        DateTimeOffset.UtcNow);
+
+            await _transitionProcessor.ApplyAsync(
+                transition,
+                _state);
+
+            return [transition];
         }
 
         private Entity GetAuthorizedEmbodiedTarget(

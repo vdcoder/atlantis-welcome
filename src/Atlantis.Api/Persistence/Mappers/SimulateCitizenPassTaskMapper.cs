@@ -1,16 +1,16 @@
 ﻿using Atlantis.Api.Citizens.Brain.CortexJobs.Simulation;
-using Atlantis.Api.Persistence.Entities;
+using Atlantis.Api.Persistence.Records;
 
 namespace Atlantis.Api.Persistence.Mappers;
 
 public static class SimulateCitizenPassTaskMapper
 {
-    public static SimulateCitizenPassTaskEntity ToEntity(
+    public static SimulateCitizenPassTaskRecord ToEntity(
         SimulateCitizenPassTask task)
     {
         ArgumentNullException.ThrowIfNull(task);
 
-        return new SimulateCitizenPassTaskEntity
+        return new SimulateCitizenPassTaskRecord
         {
             CortexTaskId = task.CortexTaskId,
             ExternalCitizenId =
@@ -26,7 +26,7 @@ public static class SimulateCitizenPassTaskMapper
     }
 
     public static SimulateCitizenPassTask ToDomain(
-        SimulateCitizenPassTaskEntity entity)
+        SimulateCitizenPassTaskRecord entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
 

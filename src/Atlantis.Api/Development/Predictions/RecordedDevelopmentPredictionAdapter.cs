@@ -1,6 +1,6 @@
-﻿using Atlantis.Api.Data;
-using Atlantis.Api.Development.Predictions.Domain;
+﻿using Atlantis.Api.Development.Predictions.Domain;
 using Atlantis.Api.Development.Predictions.Serialization;
+using Atlantis.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Atlantis.Api.Development.Predictions;

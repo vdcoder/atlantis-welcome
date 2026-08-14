@@ -17,33 +17,60 @@ namespace AtlantisWelcome.Entities
 
         public Vector3 AuthoritativePosition { get; private set; }
 
-        public void Apply(EntityDto entity)
+        public void Apply(
+            EntityDto entity,
+            bool applyPosition = true)
         {
             var receivedPosition = new Vector3(
                 entity.position.x,
                 entity.position.y,
                 entity.position.z);
 
-            var isNewEntity = string.IsNullOrEmpty(EntityId);
+            var isNewEntity =
+                string.IsNullOrEmpty(EntityId);
 
             EntityId = entity.id;
             gameObject.name = entity.name;
 
-            AuthoritativePosition = receivedPosition;
+            AuthoritativePosition =
+                receivedPosition;
 
             if (isNewEntity)
             {
-                transform.position = receivedPosition;
-                _startPosition = receivedPosition;
-                _targetPosition = receivedPosition;
-                _isInterpolating = false;
+                transform.position =
+                    receivedPosition;
+
+                _startPosition =
+                    receivedPosition;
+
+                _targetPosition =
+                    receivedPosition;
+
+                _isInterpolating =
+                    false;
+
                 return;
             }
 
-            _startPosition = transform.position;
-            _targetPosition = receivedPosition;
-            _interpolationStartedAt = Time.time;
-            _isInterpolating = true;
+            if (!applyPosition)
+            {
+                _isInterpolating =
+                    false;
+
+                return;
+            }
+
+            _startPosition =
+                transform.position;
+
+            _targetPosition =
+                receivedPosition;
+
+            _interpolationStartedAt =
+                Time.time;
+
+            _isInterpolating =
+                true;
         }
 
         private void Update()

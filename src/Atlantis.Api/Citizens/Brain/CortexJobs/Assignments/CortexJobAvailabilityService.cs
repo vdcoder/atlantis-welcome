@@ -1,7 +1,7 @@
 ﻿using System.Data;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Assignments;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Domain;
-using Atlantis.Api.Data;
+using Atlantis.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Atlantis.Api.Citizens.Brain.CortexJobs.Assignments;

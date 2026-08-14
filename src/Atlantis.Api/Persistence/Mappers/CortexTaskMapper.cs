@@ -1,16 +1,16 @@
 ﻿using Atlantis.Api.Citizens.Brain.CortexJobs.Tasks;
-using Atlantis.Api.Persistence.Entities;
+using Atlantis.Api.Persistence.Records;
 
 namespace Atlantis.Api.Persistence.Mappers;
 
 public static class CortexTaskMapper
 {
-    public static CortexTaskEntity ToEntity(
+    public static CortexTaskRecord ToEntity(
         CortexTask task)
     {
         ArgumentNullException.ThrowIfNull(task);
 
-        return new CortexTaskEntity
+        return new CortexTaskRecord
         {
             Id = task.Id,
             CortexJobDefinitionId =
@@ -30,7 +30,7 @@ public static class CortexTaskMapper
     }
 
     public static CortexTask ToDomain(
-        CortexTaskEntity entity)
+        CortexTaskRecord entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
 

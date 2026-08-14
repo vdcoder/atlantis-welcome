@@ -1,81 +1,122 @@
 ﻿using Atlantis.Api.Citizens.Perception;
 
-namespace Atlantis.Api.Citizens.Interaction
+namespace Atlantis.Api.Citizens.Interaction;
+
+public sealed record TargetMatch(
+    string EntityId,
+    string Reference,
+    float Distance);
+
+public sealed record TargetResolution(
+    TargetResolutionStatus Status,
+    TargetMatch? Match);
+
+public enum TargetResolutionStatus
 {
-    public sealed record TargetMatch(
-        string EntityId,
-        string Name,
-        float Score,
-        float Distance);
+    NotFound = 0,
+    Found = 1,
+    MultipleFound = 2
+}
 
-    public sealed class SemanticReach
+public sealed class SemanticReach
+{
+    public TargetResolution Resolve(
+        string query,
+        IReadOnlyList<PerceivedEntityBinding> nearbyEntityBindings)
     {
-        public TargetMatch? Resolve(
-            string query,
-            IReadOnlyList<PerceivedObject> nearbyObjects)
+        ArgumentNullException.ThrowIfNull(
+            nearbyEntityBindings);
+
+        if (string.IsNullOrWhiteSpace(query))
         {
-            if (string.IsNullOrWhiteSpace(query))
-            {
-                return null;
-            }
-
-            var normalizedQuery = Normalize(query);
-
-            return nearbyObjects
-                .Where(item => item.IsInteractable)
-                .Select(item => new TargetMatch(
-                    item.EntityId,
-                    item.Name,
-                    Score(normalizedQuery, item),
-                    item.Distance))
-                .Where(match => match.Score > 0)
-                .OrderByDescending(match => match.Score)
-                .ThenBy(match => match.Distance)
-                .FirstOrDefault();
+            return new TargetResolution(
+                TargetResolutionStatus.NotFound,
+                null);
         }
 
-        private static string Normalize(string value)
+        var queryKeywords =
+            Tokenize(
+                Normalize(query));
+
+        var matches =
+            nearbyEntityBindings
+                .Where(
+                    binding =>
+                        binding.TransparentEntity
+                            .IsInteractable)
+                .Where(
+                    binding =>
+                        Matches(
+                            queryKeywords,
+                            binding.TransparentEntity
+                                .Reference))
+                .ToList();
+
+        if (matches.Count == 0)
         {
-            return value
+            return new TargetResolution(
+                TargetResolutionStatus.NotFound,
+                null);
+        }
+
+        if (matches.Count > 1)
+        {
+            return new TargetResolution(
+                TargetResolutionStatus.MultipleFound,
+                null);
+        }
+
+        var binding =
+            matches[0];
+
+        return new TargetResolution(
+            TargetResolutionStatus.Found,
+            new TargetMatch(
+                EntityId:
+                    binding.EntityId,
+
+                Reference:
+                    binding.TransparentEntity
+                        .Reference,
+
+                Distance:
+                    binding.TransparentEntity
+                        .Distance));
+    }
+
+    private static bool Matches(
+        IReadOnlySet<string> queryKeywords,
+        string reference)
+    {
+        var candidateKeywords =
+            Tokenize(
+                Normalize(reference));
+
+        return queryKeywords.All(
+            candidateKeywords.Contains);
+    }
+
+    private static HashSet<string> Tokenize(
+        string value)
+    {
+        return value
+            .Split(
+                ' ',
+                StringSplitOptions.RemoveEmptyEntries)
+            .ToHashSet(
+                StringComparer.Ordinal);
+    }
+
+    private static string Normalize(
+        string value)
+    {
+        return string.Join(
+            ' ',
+            value
                 .Trim()
-                .ToLowerInvariant();
-        }
-
-        private static float Score(
-            string normalizedQuery,
-            PerceivedObject item)
-        {
-            var id = Normalize(item.EntityId);
-            var name = Normalize(item.Name);
-            var type = Normalize(item.Type);
-
-            if (id == normalizedQuery)
-                return 100f;
-
-            if (name == normalizedQuery)
-                return 90f;
-
-            if (name.Contains(normalizedQuery))
-                return 70f;
-
-            if (normalizedQuery.Contains(name))
-                return 60f;
-
-            if (type == normalizedQuery)
-                return 40f;
-
-            var queryTokens = normalizedQuery
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-            var candidateTokens = $"{name} {type} {id}"
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .ToHashSet();
-
-            var overlap = queryTokens.Count(candidateTokens.Contains);
-
-            return overlap == 0
-                ? 0f
-                : 10f + overlap * 5f;
-        }
+                .ToLowerInvariant()
+                .Split(
+                    ' ',
+                    StringSplitOptions.RemoveEmptyEntries));
     }
 }

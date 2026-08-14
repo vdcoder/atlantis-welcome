@@ -2,7 +2,7 @@ namespace Atlantis.Api.World;
 
 public sealed class WorldState
 {
-    public Models.World World
+    public World World
     {
         get;
         private set;
@@ -15,7 +15,7 @@ public sealed class WorldState
     }
 
     public void Initialize(
-        Models.World world,
+        World world,
         long revision = 0)
     {
         World = world;

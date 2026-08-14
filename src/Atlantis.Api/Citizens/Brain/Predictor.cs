@@ -2,7 +2,7 @@ using Atlantis.Api.Citizens.Brain.CortexContext.DynamicContext.Generators;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Tasks;
 using Atlantis.Api.Citizens.Brain.CortexTools;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Simulation;
-using Atlantis.Api.Models;
+using Atlantis.Api.Common;
 
 namespace Atlantis.Api.Citizens.Brain
 {

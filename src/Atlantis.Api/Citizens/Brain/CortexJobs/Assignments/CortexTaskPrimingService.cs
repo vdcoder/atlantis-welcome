@@ -1,11 +1,9 @@
 ﻿using Atlantis.Api.Citizens.Brain.CortexJobs.Qualifications;
 using Atlantis.Api.Citizens.Brain.CortexJobs.Tasks;
-using Atlantis.Api.Citizens.Brain.CortexJobs.Assignments;
-using Atlantis.Api.Citizens.Brain.CortexJobs.Domain;
-using Atlantis.Api.Data;
-using Atlantis.Api.Persistence.Entities;
+using Atlantis.Api.Persistence.Records;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using Atlantis.Api.Persistence;
 
 namespace Atlantis.Api.Citizens.Brain.CortexJobs.Assignments;
 
@@ -237,7 +235,7 @@ public sealed class CortexTaskPrimingService
                 (int)CortexTaskStatus.Assigned;
 
             var assignment =
-                new CortexTaskAssignmentEntity
+                new CortexTaskAssignmentRecord
                 {
                     Id =
                         assignmentId,

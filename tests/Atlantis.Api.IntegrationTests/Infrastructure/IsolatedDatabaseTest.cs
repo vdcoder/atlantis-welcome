@@ -1,4 +1,4 @@
-﻿using Atlantis.Api.Data;
+﻿using Atlantis.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -7,6 +7,9 @@ namespace Atlantis.Api.IntegrationTests.Infrastructure;
 public abstract class IsolatedDatabaseTest
     : IAsyncLifetime
 {
+    protected string ConnectionString =>
+        _databaseManager.ActualConnectionString;
+
     private readonly TestDatabaseManager
         _databaseManager;
 

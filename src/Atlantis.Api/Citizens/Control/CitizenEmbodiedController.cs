@@ -49,8 +49,8 @@ public sealed class CitizenEmbodiedController
         var cortexContext =
             await _contextBuilder.BuildAsync(
                 entity,
-                context.NearbyObjects,
-                context.SensoryOrbs,
+                context.NearbyEntities,
+                context.AuditoryEvents,
                 cancellationToken);
 
         var cognitiveOutput =

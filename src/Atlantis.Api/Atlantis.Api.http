@@ -53,3 +53,64 @@ Content-Type: application/json
   "contextHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "contextSerialized": "{\"bodyEntityId\":\"orestes\",\"observedWorldRevision\":2953,\"observedAt\":\"2026-08-06T14:46:49.6603913+00:00\"}"
 }
+
+###
+POST http://localhost:5130/api/world/entities/visitor-default/say
+Content-Type: application/json
+
+{
+  "actorId": "visitor-default",
+  "text": "Hello Orestes 4."
+}
+
+###
+##
+POST http://localhost:5130/api/world/entities/visitor-default/move
+Content-Type: application/json
+{
+  "actorId": "visitor-default",
+  "destination": {
+    "x": 0,
+    "y": 0,
+    "z": -1.5
+  }
+}
+
+
+###
+POST http://localhost:5130/api/world/entities/orestes/move
+Content-Type: application/json
+{
+  "actorId": "orestes",
+  "destination": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  }
+}
+
+###
+POST http://localhost:5130/api/world/entities/visitor-default/position-observations
+Content-Type: application/json
+
+{
+  "actorId": "visitor-default",
+  "position": {
+    "x": 1.0,
+    "y": 0.0,
+    "z": -1.5
+  }
+}
+
+  ###
+POST http://localhost:5130/api/world/entities/visitor-default/position-observations
+Content-Type: application/json
+
+{
+  "actorId": "visitor-default",
+  "position": {
+    "x": 2.0,
+    "y": 0.0,
+    "z": -1.5
+  }
+}
