@@ -1,6 +1,6 @@
 ﻿namespace Atlantis.Api.Citizens.Brain.Memory.WorkingMemory
 {
-    public sealed record EasyLogEntry(
+    public sealed record MemoryStreamEntry(
         Guid Id,
         string Content,
         int ContentTokenCount,
@@ -8,6 +8,7 @@
     {
         public int BudgetTokenCount =>
             ContentTokenCount +
-            WorkingMemoryLimits.EasyLogEntryHeaderTokens;
+            WorkingMemoryLimits
+                .StreamEntryHeaderTokens;
     }
 }

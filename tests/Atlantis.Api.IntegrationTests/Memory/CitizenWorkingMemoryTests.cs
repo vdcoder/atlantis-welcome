@@ -6,246 +6,77 @@ namespace Atlantis.Api.IntegrationTests.Memory
     public sealed class CitizenWorkingMemoryTests
     {
         [Fact]
-        public void Snapshot_ReturnsStoredLine()
+        public void GetLineContent_ReturnsEmptyForUnwrittenLine()
         {
-            var snapshot =
-                CreateSnapshot(
-                    "alpha",
-                    "beta");
-
-            Assert.Equal(
-                "alpha",
-                snapshot.GetLine(1));
-
-            Assert.Equal(
-                "beta",
-                snapshot.GetLine(2));
-        }
-
-        [Fact]
-        public void Snapshot_ReturnsEmptyForValidUnpopulatedLine()
-        {
-            var snapshot =
-                CreateSnapshot(
-                    "alpha");
+            var memory =
+                CreateWorkingMemory();
 
             Assert.Equal(
                 string.Empty,
-                snapshot.GetLine(2));
+                memory.GetLineContent(1));
 
             Assert.Equal(
                 string.Empty,
-                snapshot.GetLine(
+                memory.GetLineContent(
                     WorkingMemoryLimits.MaxLines));
         }
 
         [Fact]
-        public void Snapshot_RejectsLineBelowRange()
+        public void GetLineContent_RejectsLineBelowRange()
         {
-            var snapshot =
-                CreateSnapshot();
+            var memory =
+                CreateWorkingMemory();
 
             Assert.Throws<
                 ArgumentOutOfRangeException>(
                     () =>
-                        snapshot.GetLine(0));
+                        memory.GetLineContent(0));
         }
 
         [Fact]
-        public void Snapshot_RejectsLineAboveRange()
+        public void GetLineContent_RejectsLineAboveRange()
         {
-            var snapshot =
-                CreateSnapshot();
+            var memory =
+                CreateWorkingMemory();
 
             Assert.Throws<
                 ArgumentOutOfRangeException>(
                     () =>
-                        snapshot.GetLine(
+                        memory.GetLineContent(
                             WorkingMemoryLimits.MaxLines +
                             1));
         }
 
         [Fact]
-        public void Snapshot_RejectsTooManyLines()
-        {
-            var lines =
-                Enumerable
-                    .Range(
-                        1,
-                        WorkingMemoryLimits.MaxLines + 1)
-                    .Select(
-                        number =>
-                            $"line-{number}")
-                    .ToArray();
-
-            Assert.Throws<
-                ArgumentException>(
-                    () =>
-                        new MemorySnapshot(
-                            DateTimeOffset.UtcNow,
-                            lines));
-        }
-
-        [Fact]
-        public void UpdateLine_OverridesSnapshotValue()
+        public void Lines_HasConfiguredNumberOfSlots()
         {
             var memory =
-                CreateWorkingMemory(
-                    "original");
-
-            memory.UpdateLine(
-                1,
-                "changed");
+                CreateWorkingMemory();
 
             Assert.Equal(
-                "changed",
-                memory.GetEffectiveLine(1));
-
-            Assert.Equal(
-                "changed",
-                memory.Overrides[1]);
+                WorkingMemoryLimits.MaxLines,
+                memory.Lines.Count);
         }
 
         [Fact]
-        public void UpdateLine_WhenMatchingSnapshot_RemovesOverride()
+        public void WorkingMemoryLimits_DefinesStaticAndDynamicTiers()
         {
-            var memory =
-                CreateWorkingMemory(
-                    "original");
-
-            memory.UpdateLine(
-                1,
-                "changed");
-
-            memory.UpdateLine(
-                1,
-                "original");
+            Assert.Equal(
+                20,
+                WorkingMemoryLimits.StaticLineCount);
 
             Assert.Equal(
-                "original",
-                memory.GetEffectiveLine(1));
+                20,
+                WorkingMemoryLimits.DynamicLineCount);
 
-            Assert.False(
-                memory.Overrides.ContainsKey(1));
+            Assert.Equal(
+                WorkingMemoryLimits.StaticLineCount +
+                WorkingMemoryLimits.DynamicLineCount,
+                WorkingMemoryLimits.MaxLines);
         }
 
         [Fact]
-        public void UpdateLine_EmptyContent_ClearsSnapshotValue()
-        {
-            var memory =
-                CreateWorkingMemory(
-                    "remember this");
-
-            memory.UpdateLine(
-                1,
-                string.Empty);
-
-            Assert.Equal(
-                string.Empty,
-                memory.GetEffectiveLine(1));
-
-            Assert.True(
-                memory.Overrides.ContainsKey(1));
-
-            Assert.Equal(
-                string.Empty,
-                memory.Overrides[1]);
-        }
-
-        [Fact]
-        public void CaptureSnapshot_MaterializesEffectiveMemory()
-        {
-            var memory =
-                CreateWorkingMemory(
-                    "one",
-                    "two",
-                    "three");
-
-            memory.UpdateLine(
-                2,
-                "changed two");
-
-            memory.CaptureSnapshot(
-                DateTimeOffset.UtcNow,
-                50);
-
-            Assert.Equal(
-                "one",
-                memory.Snapshot.GetLine(1));
-
-            Assert.Equal(
-                "changed two",
-                memory.Snapshot.GetLine(2));
-
-            Assert.Equal(
-                "three",
-                memory.Snapshot.GetLine(3));
-        }
-
-        [Fact]
-        public void CaptureSnapshot_PreservesExplicitlyClearedLine()
-        {
-            var memory =
-                CreateWorkingMemory(
-                    "one");
-
-            memory.UpdateLine(
-                1,
-                string.Empty);
-
-            memory.CaptureSnapshot(
-                DateTimeOffset.UtcNow,
-                50);
-
-            Assert.Equal(
-                string.Empty,
-                memory.Snapshot.GetLine(1));
-        }
-
-        [Fact]
-        public void CaptureSnapshot_ClearsOverrides()
-        {
-            var memory =
-                CreateWorkingMemory(
-                    "one");
-
-            memory.UpdateLine(
-                1,
-                "changed");
-
-            memory.CaptureSnapshot(
-                DateTimeOffset.UtcNow,
-                50);
-
-            Assert.Empty(
-                memory.Overrides);
-        }
-
-        [Fact]
-        public void CaptureSnapshot_UpdatesTimestampAndCountdown()
-        {
-            var memory =
-                CreateWorkingMemory(
-                    "one");
-
-            var capturedAt =
-                DateTimeOffset.UtcNow;
-
-            memory.CaptureSnapshot(
-                capturedAt,
-                77);
-
-            Assert.Equal(
-                capturedAt,
-                memory.Snapshot.CapturedAt);
-
-            Assert.Equal(
-                77,
-                memory.CaptureCountdown);
-        }
-
-        [Fact]
-        public void EasyRemember_AppendsEntriesInOrder()
+        public void AppendToStream_AppendsEntriesInOrder()
         {
             var memory =
                 CreateWorkingMemory();
@@ -256,69 +87,77 @@ namespace Atlantis.Api.IntegrationTests.Memory
             var secondAt =
                 firstAt.AddSeconds(1);
 
-            memory.EasyRemember(
+            memory.AppendToStream(
                 "first",
                 10,
                 firstAt);
 
-            memory.EasyRemember(
+            memory.AppendToStream(
                 "second",
                 20,
                 secondAt);
 
             Assert.Equal(
                 2,
-                memory.EasyLog.Count);
+                memory.Stream.Count);
 
             Assert.Equal(
                 "first",
-                memory.EasyLog[0].Content);
+                memory.Stream[0].Content);
+
+            Assert.Equal(
+                firstAt,
+                memory.Stream[0].CreatedAt);
 
             Assert.Equal(
                 "second",
-                memory.EasyLog[1].Content);
+                memory.Stream[1].Content);
+
+            Assert.Equal(
+                secondAt,
+                memory.Stream[1].CreatedAt);
         }
 
         [Fact]
-        public void EasyRemember_TokenCountIncludesEntryHeader()
+        public void AppendToStream_TokenCountIncludesEntryHeader()
         {
             var memory =
                 CreateWorkingMemory();
 
-            memory.EasyRemember(
+            memory.AppendToStream(
                 "hello",
                 10,
                 DateTimeOffset.UtcNow);
 
             Assert.Equal(
                 10 +
-                WorkingMemoryLimits.EasyLogEntryHeaderTokens,
-                memory.EasyLogTokenCount);
+                WorkingMemoryLimits.StreamEntryHeaderTokens,
+                memory.StreamTokenCount);
         }
 
         [Fact]
-        public void EasyRemember_UnderBudget_DoesNotEvict()
+        public void AppendToStream_UnderBudget_DoesNotEvict()
         {
             var memory =
                 CreateWorkingMemory();
 
-            memory.EasyRemember(
+            memory.AppendToStream(
                 "first",
                 100,
                 DateTimeOffset.UtcNow);
 
-            memory.EasyRemember(
+            memory.AppendToStream(
                 "second",
                 100,
                 DateTimeOffset.UtcNow);
 
             Assert.Equal(
                 2,
-                memory.EasyLog.Count);
+                memory.Stream.Count);
         }
 
         [Fact]
-        public void EasyRemember_Overflow_EvictsOldestWholeEntry()
+        public void AppendToStream_Overflow_EvictsOldestWholeEntry()
         {
             var memory =
                 CreateWorkingMemory();
@@ -329,109 +168,142 @@ namespace Atlantis.Api.IntegrationTests.Memory
             var secondContentTokens =
                 500;
 
-            memory.EasyRemember(
+            memory.AppendToStream(
                 "first",
                 firstContentTokens,
                 DateTimeOffset.UtcNow);
 
-            memory.EasyRemember(
+            memory.AppendToStream(
                 "second",
                 secondContentTokens,
                 DateTimeOffset.UtcNow);
 
             Assert.Single(
-                memory.EasyLog);
+                memory.Stream);
 
             Assert.Equal(
                 "second",
-                memory.EasyLog[0].Content);
+                memory.Stream[0].Content);
 
             Assert.Equal(
                 secondContentTokens +
-                WorkingMemoryLimits.EasyLogEntryHeaderTokens,
-                memory.EasyLogTokenCount);
+                WorkingMemoryLimits.StreamEntryHeaderTokens,
+                memory.StreamTokenCount);
         }
 
         [Fact]
-        public void EasyRemember_Overflow_CanEvictMultipleOldEntries()
+        public void AppendToStream_Overflow_CanEvictMultipleOldEntries()
         {
             var memory =
                 CreateWorkingMemory();
 
-            memory.EasyRemember(
+            memory.AppendToStream(
                 "first",
                 300,
                 DateTimeOffset.UtcNow);
 
-            memory.EasyRemember(
+            memory.AppendToStream(
                 "second",
                 300,
                 DateTimeOffset.UtcNow);
 
-            memory.EasyRemember(
+            memory.AppendToStream(
                 "third",
                 300,
                 DateTimeOffset.UtcNow);
 
-            memory.EasyRemember(
+            memory.AppendToStream(
                 "fourth",
                 800,
                 DateTimeOffset.UtcNow);
 
             Assert.Single(
-                memory.EasyLog);
+                memory.Stream);
 
             Assert.Equal(
                 "fourth",
-                memory.EasyLog[0].Content);
+                memory.Stream[0].Content);
         }
 
         [Fact]
-        public void EasyRemember_RejectsSingleEntryLargerThanBudget()
+        public void AppendToStream_RejectsEmptyContent()
+        {
+            var memory =
+                CreateWorkingMemory();
+
+            Assert.Throws<
+                ArgumentException>(
+                    () =>
+                        memory.AppendToStream(
+                            string.Empty,
+                            1,
+                            DateTimeOffset.UtcNow));
+        }
+
+        [Fact]
+        public void AppendToStream_RejectsNonPositiveTokenCount()
+        {
+            var memory =
+                CreateWorkingMemory();
+
+            Assert.Throws<
+                ArgumentOutOfRangeException>(
+                    () =>
+                        memory.AppendToStream(
+                            "hello",
+                            0,
+                            DateTimeOffset.UtcNow));
+        }
+
+        [Fact]
+        public void AppendToStream_RejectsSingleEntryLargerThanBudget()
         {
             var memory =
                 CreateWorkingMemory();
 
             var contentTokens =
-                WorkingMemoryLimits.MaxEasyLogTokens -
-                WorkingMemoryLimits.EasyLogEntryHeaderTokens +
+                WorkingMemoryLimits.MaxStreamTokens -
+                WorkingMemoryLimits.StreamEntryHeaderTokens +
                 1;
 
             Assert.Throws<
                 ArgumentException>(
                     () =>
-                        memory.EasyRemember(
+                        memory.AppendToStream(
                             "too large",
                             contentTokens,
                             DateTimeOffset.UtcNow));
         }
 
+        [Fact]
+        public void AppendToStream_AllowsEntryThatExactlyFillsBudget()
+        {
+            var memory =
+                CreateWorkingMemory();
+
+            var contentTokens =
+                WorkingMemoryLimits.MaxStreamTokens -
+                WorkingMemoryLimits.StreamEntryHeaderTokens;
+
+            memory.AppendToStream(
+                "exact fit",
+                contentTokens,
+                DateTimeOffset.UtcNow);
+
+            Assert.Single(
+                memory.Stream);
+
+            Assert.Equal(
+                WorkingMemoryLimits.MaxStreamTokens,
+                memory.StreamTokenCount);
+        }
+
         private static CitizenWorkingMemory
-            CreateWorkingMemory(
-                params string[] lines)
+            CreateWorkingMemory()
         {
             return new CitizenWorkingMemory(
                 citizenId:
-                    "orestes",
-
-                snapshot:
-                    CreateSnapshot(
-                        lines),
-
-                captureCountdown:
-                    100);
-        }
-
-        private static MemorySnapshot
-            CreateSnapshot(
-                params string[] lines)
-        {
-            return new MemorySnapshot(
-                capturedAt:
-                    DateTimeOffset.UtcNow,
-
-                lines:
-                    lines);
+                    "orestes");
         }
     }
 }

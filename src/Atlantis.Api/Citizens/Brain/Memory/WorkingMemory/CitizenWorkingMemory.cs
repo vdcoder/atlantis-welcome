@@ -3,18 +3,51 @@
     public sealed class CitizenWorkingMemory
     {
         public CitizenWorkingMemory(
+            string citizenId)
+        {
+            CitizenId =
+                citizenId;
+        }
+
+        public CitizenWorkingMemory(
             string citizenId,
-            MemorySnapshot snapshot,
-            int captureCountdown)
+            IReadOnlyList<WorkingMemoryLine> lines,
+            IReadOnlyList<MemoryStreamEntry> stream)
         {
             CitizenId =
                 citizenId;
 
-            Snapshot =
-                snapshot;
+            foreach (var line in lines)
+            {
+                if (line.LineNumber < 1 ||
+                    line.LineNumber >
+                        WorkingMemoryLimits.MaxLines)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(lines));
+                }
 
-            CaptureCountdown =
-                captureCountdown;
+                _lines[
+                    line.LineNumber - 1] =
+                        line;
+            }
+
+            foreach (var entry in stream)
+            {
+                _stream.Add(
+                    entry);
+
+                _streamTokenCount +=
+                    entry.BudgetTokenCount;
+            }
+
+            if (_streamTokenCount >
+                WorkingMemoryLimits.MaxStreamTokens)
+            {
+                throw new ArgumentException(
+                    "Loaded memory stream exceeds its token budget.",
+                    nameof(stream));
+            }
         }
 
         public string CitizenId
@@ -22,103 +55,63 @@
             get;
         }
 
-        public MemorySnapshot Snapshot
-        {
-            get;
-            private set;
-        }
+        private readonly WorkingMemoryLine?[]
+            _lines =
+                new WorkingMemoryLine?[
+                    WorkingMemoryLimits.MaxLines];
 
-        public int CaptureCountdown
-        {
-            get;
-            private set;
-        }
+        private readonly List<MemoryStreamEntry>
+            _stream =
+                new List<MemoryStreamEntry>();
 
-        private readonly Dictionary<int, string>
-            _overrides =
-                new Dictionary<int, string>();
+        private int _streamTokenCount;
 
-        private readonly List<EasyLogEntry>
-            _easyLog =
-                new List<EasyLogEntry>();
+        public IReadOnlyList<WorkingMemoryLine?>
+            Lines =>
+                _lines;
 
-        private int _easyLogTokenCount;
+        public IReadOnlyList<MemoryStreamEntry>
+            Stream =>
+                _stream;
 
-        public IReadOnlyDictionary<int, string>
-            Overrides =>
-                _overrides;
+        public int StreamTokenCount =>
+            _streamTokenCount;
 
-        public IReadOnlyList<EasyLogEntry>
-            EasyLog =>
-                _easyLog;
-
-        public int EasyLogTokenCount =>
-            _easyLogTokenCount;
-
-        public string GetEffectiveLine(
+        public string GetLineContent(
             int lineNumber)
         {
-            if (_overrides.TryGetValue(
-                    lineNumber,
-                    out var overriddenValue))
+            if (lineNumber < 1 ||
+                lineNumber >
+                    WorkingMemoryLimits.MaxLines)
             {
-                return overriddenValue;
+                throw new ArgumentOutOfRangeException(
+                    nameof(lineNumber));
             }
 
-            return Snapshot.GetLine(
-                lineNumber);
+            return _lines[
+                lineNumber - 1]
+                ?.Content ??
+                string.Empty;
         }
 
         public void UpdateLine(
             int lineNumber,
             string content)
         {
-            var snapshotValue =
-                Snapshot.GetLine(
-                    lineNumber);
-
-            if (content == snapshotValue)
+            if (lineNumber < 1 ||
+                lineNumber >
+                    WorkingMemoryLimits.MaxLines)
             {
-                _overrides.Remove(
-                    lineNumber);
-
-                return;
+                throw new ArgumentOutOfRangeException(
+                    nameof(lineNumber));
             }
 
-            _overrides[lineNumber] =
-                content;
+            // validate token budget
+            // persist append-only line
+            // replace _lines[lineNumber - 1]
         }
 
-        public void CaptureSnapshot(
-            DateTimeOffset capturedAt,
-            int nextCaptureCountdown)
-        {
-            var lines =
-                new string[
-                    WorkingMemoryLimits.MaxLines];
-
-            for (var lineNumber = 1;
-                 lineNumber <=
-                     WorkingMemoryLimits.MaxLines;
-                 lineNumber++)
-            {
-                lines[lineNumber - 1] =
-                    GetEffectiveLine(
-                        lineNumber);
-            }
-
-            Snapshot =
-                new MemorySnapshot(
-                    capturedAt,
-                    lines);
-
-            _overrides.Clear();
-
-            CaptureCountdown =
-                nextCaptureCountdown;
-        }
-
-        public void EasyRemember(
+        public void AppendToStream(
             string content,
             int tokenCount,
             DateTimeOffset createdAt)
@@ -127,7 +120,7 @@
                     content))
             {
                 throw new ArgumentException(
-                    "Easy log memory cannot be empty.",
+                    "Memory stream entry cannot be empty.",
                     nameof(content));
             }
 
@@ -138,38 +131,38 @@
             }
 
             var entry =
-                new EasyLogEntry(
+                new MemoryStreamEntry(
                     Guid.NewGuid(),
                     content,
                     tokenCount,
                     createdAt);
 
             if (entry.BudgetTokenCount >
-                WorkingMemoryLimits.MaxEasyLogTokens)
+                WorkingMemoryLimits.MaxStreamTokens)
             {
                 throw new ArgumentException(
-                    $"A single easy log entry cannot exceed " +
-                    $"{WorkingMemoryLimits.MaxEasyLogTokens} tokens " +
+                    $"A single stream entry cannot exceed " +
+                    $"{WorkingMemoryLimits.MaxStreamTokens} tokens " +
                     $"including entry overhead.",
                     nameof(tokenCount));
             }
 
-            _easyLog.Add(
+            _stream.Add(
                 entry);
 
-            _easyLogTokenCount +=
+            _streamTokenCount +=
                 entry.BudgetTokenCount;
 
-            while (_easyLogTokenCount >
-                   WorkingMemoryLimits.MaxEasyLogTokens)
+            while (_streamTokenCount >
+                   WorkingMemoryLimits.MaxStreamTokens)
             {
                 var oldest =
-                    _easyLog[0];
+                    _stream[0];
 
-                _easyLog.RemoveAt(
+                _stream.RemoveAt(
                     0);
 
-                _easyLogTokenCount -=
+                _streamTokenCount -=
                     oldest.BudgetTokenCount;
             }
         }

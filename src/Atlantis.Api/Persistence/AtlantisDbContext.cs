@@ -105,6 +105,12 @@ public sealed class AtlantisDbContext : DbContext
     public DbSet<SensoryOrbTargetRecord> SensoryOrbTargets =>
         Set<SensoryOrbTargetRecord>();
 
+    public DbSet<CitizenMemoryStreamEntryRecord> CitizenMemoryStreamEntries =>
+        Set<CitizenMemoryStreamEntryRecord>();
+
+    public DbSet<CitizenWorkingMemoryLineRecord> CitizenWorkingMemoryLines =>
+        Set<CitizenWorkingMemoryLineRecord>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -15,10 +15,13 @@ public sealed class AtlantisDbContextFactory
                 "ASPNETCORE_ENVIRONMENT")
             ?? "Development";
 
-        var configuration =
+        var basePath =
+            Directory.GetCurrentDirectory();
+
+        var configurationBuilder =
             new ConfigurationBuilder()
                 .SetBasePath(
-                    Directory.GetCurrentDirectory())
+                    basePath)
                 .AddJsonFile(
                     "appsettings.json",
                     optional:
@@ -26,7 +29,21 @@ public sealed class AtlantisDbContextFactory
                 .AddJsonFile(
                     $"appsettings.{environment}.json",
                     optional:
-                        true)
+                        true);
+
+        if (environment.Equals(
+                "Development",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            configurationBuilder.AddUserSecrets(
+                typeof(AtlantisDbContextFactory)
+                    .Assembly,
+                optional:
+                    true);
+        }
+
+        var configuration =
+            configurationBuilder
                 .AddEnvironmentVariables()
                 .Build();
 
